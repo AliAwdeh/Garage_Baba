@@ -80,15 +80,96 @@ namespace Project_Advanced.Controllers
             return RedirectToAction(nameof(Conversation), new { id = conv.Id });
         }
 
-        // Create conversation, seed context, and start with a message (AJAX)
+        // Create conversation for a work order and include vehicle + historical work orders in IssueContext as JSON
         [HttpPost]
-        public async Task<IActionResult> CreateAndStartChat(string title, string issueContext)
+        public async Task<IActionResult> CreateAndStartChatForWorkOrder(int workOrderId)
         {
             var user = await _userManager.GetUserAsync(User);
+            var workOrder = await _context.WorkOrders
+                .Include(w => w.Vehicle)
+                    .ThenInclude(v => v.Customer)
+                .Include(w => w.Items)
+                    .ThenInclude(i => i.Part)
+                .FirstOrDefaultAsync(w => w.Id == workOrderId);
+
+            if (workOrder == null) return NotFound();
+
+            var history = await _context.WorkOrders
+                .Where(w => w.VehicleId == workOrder.VehicleId && w.Id != workOrderId)
+                .Include(w => w.Items)
+                    .ThenInclude(i => i.Part)
+                .OrderByDescending(w => w.CreatedAt)
+                .ToListAsync();
+
+            var contextPayload = new
+            {
+                workOrderId = workOrder.Id,
+                vehicle = workOrder.Vehicle == null ? null : new
+                {
+                    workOrder.Vehicle.PlateNumber,
+                    workOrder.Vehicle.Make,
+                    workOrder.Vehicle.Model,
+                    workOrder.Vehicle.Year,
+                    first_odometer = workOrder.Vehicle.CurrentOdometer,
+                    customer = workOrder.Vehicle.Customer == null ? null : new
+                    {
+                        workOrder.Vehicle.Customer.FirstName,
+                        workOrder.Vehicle.Customer.LastName,
+                        workOrder.Vehicle.Customer.Email
+                    }
+                },
+                currentIssue = workOrder.ProblemDescription,
+                currentItems = workOrder.Items
+                    .OrderBy(i => i.Id)
+                    .Select(i => new
+                    {
+                        i.Id,
+                        i.ItemType,
+                        i.Description,
+                        i.Quantity,
+                        i.UnitPrice,
+                        part = i.Part == null ? null : new
+                        {
+                            i.Part.Name,
+                            i.Part.PartNumber,
+                            i.Part.UnitPrice,
+                            i.Part.StockQuantity
+                        }
+                    }),
+                history = history.Select(w => new
+                {
+                    w.Id,
+                    w.CreatedAt,
+                    status = w.Status.ToString(),
+                    w.ProblemDescription,
+                    w.RecordedOdometer,
+                    items = w.Items.Select(i => new
+                    {
+                        i.Id,
+                        i.ItemType,
+                        i.Description,
+                        i.Quantity,
+                        i.UnitPrice,
+                        part = i.Part == null ? null : new
+                        {
+                            i.Part.Name,
+                            i.Part.PartNumber,
+                            i.Part.UnitPrice,
+                            i.Part.StockQuantity
+                        }
+                    })
+                })
+            };
+
+            var issueContextJson = JsonSerializer.Serialize(contextPayload, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
             var conv = new ChatConversation
             {
-                Title = string.IsNullOrWhiteSpace(title) ? "New conversation" : title,
-                IssueContext = issueContext,
+                Title = $"Work Order #{workOrder.Id} - {workOrder.Vehicle?.PlateNumber}",
+                IssueContext = issueContextJson,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 CreatedByUserId = user?.Id
@@ -97,21 +178,19 @@ namespace Project_Advanced.Controllers
             _context.ChatConversations.Add(conv);
             await _context.SaveChangesAsync();
 
-            // Seed initial message
             var userMsg = new ChatMessage
             {
                 ConversationId = conv.Id,
                 Sender = "user",
-                Content = "hey checkout this new workorder",
+                Content = "Review this work order context and assist.",
                 CreatedAt = DateTime.UtcNow
             };
             _context.ChatMessages.Add(userMsg);
             await _context.SaveChangesAsync();
 
-            // Kick off assistant reply using just the initial message
             try
             {
-                var assistantReply = await GetAssistantReplyAsync(conv, new[] { userMsg });
+                var assistantReply = await GetAssistantReplyAsync(conv);
                 var aiMsg = new ChatMessage
                 {
                     ConversationId = conv.Id,
@@ -125,7 +204,7 @@ namespace Project_Advanced.Controllers
             }
             catch
             {
-                // swallow errors here to avoid blocking redirect; conversation exists with initial message
+                // Keep the conversation even if AI call fails
             }
 
             return Json(new { conversationId = conv.Id });
@@ -164,10 +243,14 @@ namespace Project_Advanced.Controllers
             return RedirectToAction(nameof(Conversation), new { id });
         }
 
-        private async Task<string> GetAssistantReplyAsync(ChatConversation conv, IEnumerable<ChatMessage> orderedMessages)
+        private async Task<string> GetAssistantReplyAsync(ChatConversation conv)
         {
-            var messages = new System.Collections.Generic.List<object>();
+            var history = await _context.ChatMessages
+                .Where(m => m.ConversationId == conv.Id)
+                .OrderBy(m => m.CreatedAt)
+                .ToListAsync();
 
+            var messages = new System.Collections.Generic.List<object>();
             var systemContent =
                 "You are an automotive technician assistant., you help the lead mechanic " +
                 "Use the full conversation history and issue context to help diagnose car issues and suggest checks.";
@@ -178,7 +261,7 @@ namespace Project_Advanced.Controllers
 
             messages.Add(new { role = "system", content = systemContent });
 
-            foreach (var m in orderedMessages)
+            foreach (var m in history)
             {
                 var role = m.Sender == "assistant" ? "assistant" : "user";
                 messages.Add(new { role, content = m.Content });
@@ -246,11 +329,7 @@ namespace Project_Advanced.Controllers
             _context.ChatMessages.Add(userMsg);
             await _context.SaveChangesAsync();
 
-            var ordered = conv.Messages
-                .OrderBy(m => m.CreatedAt)
-                .Concat(new[] { userMsg }); // include new message
-
-            var assistantReply = await GetAssistantReplyAsync(conv, ordered);
+            var assistantReply = await GetAssistantReplyAsync(conv);
 
             // Save assistant message
             var aiMsg = new ChatMessage
@@ -294,14 +373,10 @@ namespace Project_Advanced.Controllers
             _context.ChatMessages.Add(userMsg);
             await _context.SaveChangesAsync();
 
-            var ordered = conv.Messages
-                .OrderBy(m => m.CreatedAt)
-                .Concat(new[] { userMsg });
-
             string assistantReply;
             try
             {
-                assistantReply = await GetAssistantReplyAsync(conv, ordered);
+                assistantReply = await GetAssistantReplyAsync(conv);
             }
             catch (Exception ex)
             {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
@@ -8,40 +9,71 @@ using Project_Advanced.Data;
 using Project_Advanced.Models;
 using Stripe;
 using CustomerModel = Project_Advanced.Models.Customer;
+using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+// =======================
+// Database (MySQL)
+// =======================
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseSqlite(connectionString);
+    var serverVersion = new MySqlServerVersion(new Version(8, 0, 36)); 
+
+    options.UseMySql(connectionString, serverVersion);
     options.LogTo(Console.WriteLine, LogLevel.Information);
+
     if (builder.Environment.IsDevelopment())
     {
         options.EnableSensitiveDataLogging();
     }
 });
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+// =======================
+// Identity + Roles
+// =======================
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
     })
-    .AddRoles<IdentityRole>() // enable role-based auth
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
+
 builder.Services.AddControllersWithViews();
+
+// =======================
+// HttpClient for External AI
+// =======================
+var externalAiBaseUrl = builder.Configuration["ExternalAI:BaseUrl"]
+    ?? throw new InvalidOperationException("ExternalAI:BaseUrl is not configured");
 
 builder.Services.AddHttpClient("ExternalAI", client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["ExternalAI:BaseUrl"]!);
+    client.BaseAddress = new Uri(externalAiBaseUrl);
 });
 
 var app = builder.Build();
-StripeConfiguration.ApiKey = "sk_test_51HYCptHKGUqybGpYSnxvsmu3zGWXQo7kXzpzX64Qln3rZxgqRjxiZnat2cH0p8fZApDLV6m56lrYB7fGn34nW9G900CrsN8vsi";
-var webhookSecret = "whsec_9d65de58cfaee74a088f7a459d65afab02892bc7b2fbdd73da043064d6a8179d";
-app.UseStaticFiles();
-// Configure the HTTP request pipeline.
+
+// =======================
+// Stripe config
+// =======================
+// appsettings.json:
+// "Stripe": {
+//   "SecretKey": "sk_test_...",
+//   "WebhookSecret": "whsec_..."
+// }
+
+StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+
+// =======================
+// HTTP request pipeline
+// =======================
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -49,16 +81,20 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+// =======================
 // Block public self-registration
+// =======================
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.HasValue &&
@@ -67,28 +103,40 @@ app.Use(async (context, next) =>
         context.Response.Redirect("/");
         return;
     }
+
     await next();
 });
 
+// =======================
+// Routing
+// =======================
 app.MapStaticAssets();
 
 app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}")
+   .WithStaticAssets();
 
 app.MapRazorPages()
    .WithStaticAssets();
 
+// =======================
+// Seeding
+// =======================
 await EnsureRolesAndAdminAsync(app.Services, app.Configuration, app.Environment);
 await EnsureSampleDataAsync(app.Services);
 
 app.Run();
 
+
+// ======================================================
+// Helpers: Roles/Admin seeding
+// ======================================================
 static async Task EnsureRolesAndAdminAsync(IServiceProvider services, IConfiguration config, IWebHostEnvironment env)
 {
     using var scope = services.CreateScope();
     var scopedServices = scope.ServiceProvider;
+
     var context = scopedServices.GetRequiredService<ApplicationDbContext>();
     await context.Database.MigrateAsync();
 
@@ -104,7 +152,7 @@ static async Task EnsureRolesAndAdminAsync(IServiceProvider services, IConfigura
         }
     }
 
-    // Only create the seed admin during development to avoid leaking credentials
+    // Only create the seed admin during development
     if (env.IsDevelopment())
     {
         var adminEmail = config["AdminUser:Email"] ?? "admin@garage.local";
@@ -135,6 +183,9 @@ static async Task EnsureRolesAndAdminAsync(IServiceProvider services, IConfigura
     }
 }
 
+// ======================================================
+// Helpers: Sample data seeding (customers/vehicles/appointments)
+// ======================================================
 static async Task EnsureSampleDataAsync(IServiceProvider services)
 {
     using var scope = services.CreateScope();
@@ -232,11 +283,14 @@ static async Task EnsureSampleDataAsync(IServiceProvider services)
     var models = new[] { "Corolla", "Civic", "F-150", "3 Series", "A4", "Silverado", "Altima", "Elantra", "Soul", "Outback" };
 
     var needed = 50 - await context.Vehicles.CountAsync();
+    if (needed <= 0) return;
+
     var customersToAdd = new List<CustomerModel>();
     var vehiclesToAdd = new List<Vehicle>();
 
     int customerIndex = 1;
     int vehicleIndex = 1;
+
     while (needed > 0)
     {
         var customer = new CustomerModel

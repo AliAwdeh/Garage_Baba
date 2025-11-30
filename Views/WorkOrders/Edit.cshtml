@@ -98,16 +98,16 @@
             @if (Model.Items != null && Model.Items.Any())
             {
                 foreach (var item in Model.Items)
-                {
-                    <tr>
-                        <td>@item.ItemType</td>
-                        <td>@item.Description</td>
-                        <td>@item.Quantity</td>
-                        <td>@string.Format("{0:0.00}", item.UnitPrice)</td>
-                        <td>@string.Format("{0:0.00}", item.Quantity * item.UnitPrice)</td>
-                        <td>
-                            <form asp-action="DeleteItem" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
+                        {
+                            <tr>
+                                <td>@item.ItemType</td>
+                                <td>@item.Description</td>
+                                <td>@item.Quantity.ToString("0.00")</td>
+                                <td>@string.Format("{0:0.00}", item.UnitPrice)</td>
+                                <td>@string.Format("{0:0.00}", item.Quantity * item.UnitPrice)</td>
+                                <td>
+                                    <form asp-action="DeleteItem" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <button type="submit" class="btn btn-sm btn-danger">X</button>
                             </form>
@@ -205,18 +205,15 @@
         // Open chat prefilled with work order info
         document.getElementById('btnOpenChat').addEventListener('click', function () {
             const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-            const title = `Work Order #${@Model.Id}`;
-            const issueContext = document.getElementById('problemDescription').value || 'No description provided.';
 
-            fetch('@Url.Action("CreateAndStartChat", "Chat")', {
+            fetch('@Url.Action("CreateAndStartChatForWorkOrder", "Chat")', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                     'RequestVerificationToken': token
                 },
                 body: new URLSearchParams({
-                    'title': title,
-                    'issueContext': issueContext,
+                    'workOrderId': '@Model.Id',
                     '__RequestVerificationToken': token
                 })
             })

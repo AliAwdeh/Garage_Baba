@@ -78,7 +78,7 @@
                             <tr>
                                 <td>@item.ItemType</td>
                                 <td>@item.Description</td>
-                                <td>@item.Quantity</td>
+                                <td>@item.Quantity.ToString("0.00")</td>
                                 <td>@item.UnitPrice.ToString("C")</td>
                                 <td>@(item.Quantity * item.UnitPrice).ToString("C")</td>
                             </tr>
@@ -105,10 +105,8 @@
     <script>
         document.getElementById('btnOpenChatDetails')?.addEventListener('click', function () {
             const token = document.querySelector('#openChatDetailsForm input[name="__RequestVerificationToken"]').value;
-            const issueContext = document.getElementById('issueContextValue').value || 'No description provided.';
-            const title = 'Work Order #@Model?.Id';
 
-            fetch('@Url.Action("CreateAndStartChat", "Chat")', {
+            fetch('@Url.Action("CreateAndStartChatForWorkOrder", "Chat")', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -116,8 +114,7 @@
                     'X-Requested-With': 'XMLHttpRequest' // <-- important
                 },
                 body: new URLSearchParams({
-                    'title': title,
-                    'issueContext': issueContext,
+                    'workOrderId': '@Model?.Id',
                     '__RequestVerificationToken': token
                 })
             })

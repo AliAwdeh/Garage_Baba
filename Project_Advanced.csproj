@@ -38,6 +38,7 @@
 
     <!-- MVC scaffolding (dotnet-aspnet-codegenerator) -->
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
     <PackageReference Include="Stripe.net" Version="43.13.0" />
   </ItemGroup>
 
