@@ -1,0 +1,66 @@
+@model Project_Advanced.Models.Vehicle
+@{
+    ViewData["Title"] = "Edit Vehicle";
+    var isAdmin = (bool)(ViewBag.IsAdmin ?? false);
+}
+
+<div class="container">
+    <h2 class="mb-3">@ViewData["Title"]</h2>
+    <div class="row">
+        <div class="col-lg-6">
+            <form asp-action="Edit" class="card card-body shadow-sm">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="mb-3">
+                    <label asp-for="PlateNumber" class="form-label">Plate Number</label>
+                    <input asp-for="PlateNumber" class="form-control" />
+                    <span asp-validation-for="PlateNumber" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Make" class="form-label">Make</label>
+                    <input asp-for="Make" class="form-control" />
+                    <span asp-validation-for="Make" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Model" class="form-label">Model</label>
+                    <input asp-for="Model" class="form-control" />
+                    <span asp-validation-for="Model" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Year" class="form-label">Year</label>
+                    <input asp-for="Year" class="form-control" />
+                    <span asp-validation-for="Year" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="CurrentOdometer" class="form-label">Current Odometer</label>
+                    <input asp-for="CurrentOdometer" class="form-control" />
+                    <span asp-validation-for="CurrentOdometer" class="text-danger"></span>
+                </div>
+
+                @if (isAdmin)
+                {
+                    <div class="mb-3">
+                        <label asp-for="CustomerId" class="form-label">Owner</label>
+                        <select asp-for="CustomerId" class="form-select" asp-items="ViewBag.CustomerId" required>
+                            <option value="">-- Select owner --</option>
+                        </select>
+                        <span asp-validation-for="CustomerId" class="text-danger"></span>
+                    </div>
+                }
+                else
+                {
+                    <input asp-for="CustomerId" type="hidden" />
+                }
+
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a class="btn btn-outline-secondary" asp-action="Index">Back to list</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

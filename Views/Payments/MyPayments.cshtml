@@ -1,0 +1,118 @@
+@model Project_Advanced.Models.ViewModels.PaginatedList<Project_Advanced.Models.ViewModels.CustomerInvoicePaymentViewModel>
+
+@{
+    ViewData["Title"] = "My Payments";
+}
+
+<div class="container">
+    <h2 class="mb-3">My Payments & Invoices</h2>
+    @if (TempData["PaymentSuccess"] is string successMsg)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMsg
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    else if (TempData["PaymentMessage"] is string infoMsg)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @infoMsg
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (Model != null && Model.Any())
+    {
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Car</th>
+                            <th>Issued</th>
+                            <th>Total</th>
+                            <th>Paid</th>
+                            <th>Outstanding</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var row in Model)
+                    {
+                        <tr>
+                            <td>@row.Invoice.Id</td>
+                            <td>@($"{row.Invoice.WorkOrder?.Vehicle?.PlateNumber} {row.Invoice.WorkOrder?.Vehicle?.Make} {row.Invoice.WorkOrder?.Vehicle?.Model}")</td>
+                            <td>@row.Invoice.IssuedAt.ToString("yyyy-MM-dd")</td>
+                            <td>@row.Invoice.Total.ToString("0.00")</td>
+                            <td>@row.Paid.ToString("0.00")</td>
+                            <td>@row.Outstanding.ToString("0.00")</td>
+                            <td>
+                                @if (row.Outstanding > 0)
+                                {
+                                    <form asp-action="BeginStripePayment" method="get" class="d-flex align-items-center gap-2">
+                                        <input type="hidden" name="invoiceId" value="@row.Invoice.Id" />
+                                        <input type="number" name="amount" min="0.01" max="@row.Outstanding" step="0.01" value="@row.Outstanding" class="form-control form-control-sm" style="max-width: 120px;" />
+                                        <button type="submit" class="btn btn-sm btn-primary">Pay with Stripe</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-success">Paid</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr class="table-light">
+                            <td colspan="7">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>Previous Payments:</strong>
+                                        @if (row.Invoice.Payments == null || !row.Invoice.Payments.Any())
+                                        {
+                                            <span class="text-muted">None</span>
+                                        }
+                                        else
+                                        {
+                                            foreach (var p in row.Invoice.Payments.OrderByDescending(p => p.PaidAt))
+                                            {
+                                                <span class="badge text-bg-secondary me-1">@p.PaidAt.ToString("yyyy-MM-dd"): @p.Amount.ToString("0.00")</span>
+                                            }
+                                        }
+                                    </div>
+                                    <div>
+                                        <strong>Status:</strong>
+                                        @if (row.Outstanding <= 0)
+                                        {
+                                            <span class="badge text-bg-success">Done</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge text-bg-warning text-dark">Due @row.Outstanding.ToString("0.00")</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">No invoices found.</div>
+    }
+
+    @if (Model != null && Model.TotalPages > 1)
+    {
+        <nav class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">Page @Model.PageIndex of @Model.TotalPages</div>
+            <div class="btn-group">
+                <a class="btn btn-outline-secondary @(Model.HasPreviousPage ? "" : "disabled")"
+                   asp-route-page="@(Model.PageIndex - 1)">Previous</a>
+                <a class="btn btn-outline-secondary @(Model.HasNextPage ? "" : "disabled")"
+                   asp-route-page="@(Model.PageIndex + 1)">Next</a>
+            </div>
+        </nav>
+    }
+</div>

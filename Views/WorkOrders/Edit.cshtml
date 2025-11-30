@@ -1,0 +1,238 @@
+@model Project_Advanced.Models.WorkOrder
+
+@{
+    ViewData["Title"] = "Edit Work Order";
+    var parts = ViewBag.Parts as List<Project_Advanced.Models.Part>;
+    Layout = "_Layout";
+}
+
+<h1>Edit Work Order #@Model.Id</h1>
+
+<hr />
+
+<div class="row">
+    <div class="col-md-6">
+        <h4>Work Order Info</h4>
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="CreatedAt" />
+
+            <div class="mb-3">
+                <label asp-for="VehicleId" class="form-label">Vehicle</label>
+                <select asp-for="VehicleId" class="form-select" asp-items="ViewBag.VehicleId" required>
+                    <option value="">-- Select vehicle --</option>
+                </select>
+                <span asp-validation-for="VehicleId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Customer</label>
+                <input class="form-control"
+                       value="@($"{Model.Vehicle?.Customer?.FirstName} {Model.Vehicle?.Customer?.LastName}")"
+                       disabled />
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="RecordedOdometer" class="form-label"></label>
+                <input asp-for="RecordedOdometer" class="form-control" />
+                <span asp-validation-for="RecordedOdometer" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ProblemDescription" class="form-label"></label>
+                <textarea asp-for="ProblemDescription" class="form-control" rows="4" id="problemDescription"></textarea>
+                <span asp-validation-for="ProblemDescription" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3 d-flex flex-wrap gap-2 align-items-start">
+                <div class="flex-grow-1">
+                    <label class="form-label">AI Chat</label>
+                    <small class="text-muted d-block mt-1">
+                        Open the chat assistant to discuss this work order.
+                    </small>
+                </div>
+                <div class="d-flex flex-column gap-2">
+                    <button type="button" class="btn btn-sm btn-secondary" id="btnOpenChat">
+                        Open Chat
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Status" class="form-label"></label>
+                <select asp-for="Status" class="form-select"
+                        asp-items="Html.GetEnumSelectList<Project_Advanced.Models.WorkOrderStatus>()">
+                </select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Work Order</button>
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        </form>
+
+        <div class="mt-3">
+            <form asp-controller="Invoices" asp-action="GenerateForWorkOrder" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="workOrderId" value="@Model.Id" />
+                <button type="submit" class="btn btn-outline-primary">Generate Invoice</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <h4>Items (Parts & Labor)</h4>
+
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Items != null && Model.Items.Any())
+            {
+                foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.ItemType</td>
+                        <td>@item.Description</td>
+                        <td>@item.Quantity</td>
+                        <td>@string.Format("{0:0.00}", item.UnitPrice)</td>
+                        <td>@string.Format("{0:0.00}", item.Quantity * item.UnitPrice)</td>
+                        <td>
+                            <form asp-action="DeleteItem" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn btn-sm btn-danger">X</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                <tr>
+                    <td colspan="4" class="text-end"><strong>Total</strong></td>
+                    <td colspan="2">
+                        @string.Format("{0:0.00}", Model.Items.Sum(i => i.Quantity * i.UnitPrice))
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-muted">No items yet.</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        <h5>Add Item</h5>
+        @if (TempData["WorkOrderItemError"] is string itemError && !string.IsNullOrWhiteSpace(itemError))
+        {
+            <div class="alert alert-danger">@itemError</div>
+        }
+        <form asp-action="AddItem" method="post" class="row g-2">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="workOrderId" value="@Model.Id" />
+
+            <div class="col-4">
+                <label class="form-label">Type</label>
+                <select name="ItemType" class="form-select" id="itemTypeSelect">
+                    <option value="Part">Part</option>
+                    <option value="Labor">Labor</option>
+                </select>
+            </div>
+
+            <div class="col-8" id="partSelectWrapper">
+                <label class="form-label">Part</label>
+                <select name="PartId" class="form-select">
+                    <option value="">-- Select Part --</option>
+                    @if (parts != null)
+                    {
+                        foreach (var p in parts)
+                        {
+                            <option value="@p.Id">@p.Name (@string.Format("{0:0.00}", p.UnitPrice))</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-12" id="laborDescriptionWrapper" style="display:none;">
+                <label class="form-label">Description (Labor)</label>
+                <input type="text" name="Description" class="form-control" placeholder="e.g., Engine diagnostics, brake inspection..." />
+            </div>
+
+            <div class="col-4">
+                <label class="form-label">Qty</label>
+                <input type="number" step="0.1" name="Quantity" class="form-control" value="1" />
+            </div>
+
+            <div class="col-4">
+                <label class="form-label">Unit Price</label>
+                <input type="number" step="0.01" name="UnitPrice" class="form-control" value="0" />
+            </div>
+
+            <div class="col-12">
+                <button type="submit" class="btn btn-success mt-2">Add Item</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script>
+        // Toggle between Part and Labor fields
+        document.getElementById('itemTypeSelect').addEventListener('change', function () {
+            var type = this.value;
+            var partWrapper = document.getElementById('partSelectWrapper');
+            var laborWrapper = document.getElementById('laborDescriptionWrapper');
+
+            if (type === 'Part') {
+                partWrapper.style.display = 'block';
+                laborWrapper.style.display = 'none';
+            } else {
+                partWrapper.style.display = 'none';
+                laborWrapper.style.display = 'block';
+            }
+        });
+
+        // Open chat prefilled with work order info
+        document.getElementById('btnOpenChat').addEventListener('click', function () {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            const title = `Work Order #${@Model.Id}`;
+            const issueContext = document.getElementById('problemDescription').value || 'No description provided.';
+
+            fetch('@Url.Action("CreateAndStartChat", "Chat")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'RequestVerificationToken': token
+                },
+                body: new URLSearchParams({
+                    'title': title,
+                    'issueContext': issueContext,
+                    '__RequestVerificationToken': token
+                })
+            })
+            .then(r => {
+                if (!r.ok) return r.text().then(t => { throw new Error(t); });
+                return r.json();
+            })
+            .then(data => {
+                if (data && data.conversationId) {
+                    window.location.href = '@Url.Action("Conversation", "Chat")' + '?id=' + data.conversationId;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Unable to open chat for this work order.');
+            });
+        });
+    </script>
+}

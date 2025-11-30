@@ -1,0 +1,110 @@
+@model Project_Advanced.Models.ViewModels.PaginatedList<Project_Advanced.Models.ViewModels.InvoicePaymentSummary>
+
+@{
+    ViewData["Title"] = "Payments";
+    var search = ViewData["search"] as string;
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-column flex-md-row gap-2">
+        <div>
+            <h2 class="mb-0">@ViewData["Title"]</h2>
+            <div class="text-muted small">All payment records</div>
+        </div>
+        <div class="d-flex flex-column flex-md-row gap-2">
+            <form class="d-flex gap-2" method="get" asp-action="Index">
+                <input class="form-control" type="search" name="search" value="@search" placeholder="Search invoice, intent, note" />
+                <button class="btn btn-outline-secondary" type="submit">Search</button>
+            </form>
+            <a class="btn btn-primary" asp-action="Create">
+                <span class="me-1">+</span>New Payment
+            </a>
+        </div>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="accordion" id="invoicePaymentsAccordion">
+            @foreach (var row in Model)
+            {
+                var collapseId = $"collapse-{row.Invoice.Id}";
+                var headingId = $"heading-{row.Invoice.Id}";
+                <div class="card shadow-sm mb-2">
+                    <div class="card-header d-flex justify-content-between align-items-center" id="@headingId">
+                        <div>
+                            <div class="fw-semibold">Invoice #@row.Invoice.Id</div>
+                            <div class="text-muted small">
+                                @row.Invoice.IssuedAt.ToLocalTime().ToString("g") |
+                                @($"{row.Invoice.Customer?.FirstName} {row.Invoice.Customer?.LastName}") |
+                                @($"{row.Invoice.WorkOrder?.Vehicle?.PlateNumber} {row.Invoice.WorkOrder?.Vehicle?.Make} {row.Invoice.WorkOrder?.Vehicle?.Model}")
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div>Total: @row.Invoice.Total.ToString("C")</div>
+                            <div>Paid: @row.TotalPaid.ToString("C")</div>
+                            <div>Outstanding: @row.Outstanding.ToString("C")</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (row.Payments != null && row.Payments.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm table-borderless mb-0">
+                                    <thead>
+                                        <tr class="text-muted">
+                                            <th>Date</th>
+                                            <th>Amount</th>
+                                            <th>Method</th>
+                                            <th>Intent</th>
+                                            <th>Notes</th>
+                                            <th class="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    @foreach (var p in row.Payments)
+                                    {
+                                        <tr>
+                                            <td>@p.PaidAt.ToLocalTime().ToString("g")</td>
+                                            <td>@p.Amount.ToString("C")</td>
+                                            <td>@p.Method</td>
+                                            <td class="text-muted small">@p.StripePaymentIntentId</td>
+                                            <td>@p.Notes</td>
+                                            <td class="text-end">
+                                                <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@p.Id">Details</a>
+                                                <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@p.Id">Edit</a>
+                                            </td>
+                                        </tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-muted">No payments recorded for this invoice.</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">No payments found.</div>
+    }
+
+    @if (Model != null && Model.TotalPages > 1)
+    {
+        <nav class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">Page @Model.PageIndex of @Model.TotalPages</div>
+            <div class="btn-group">
+                <a class="btn btn-outline-secondary @(Model.HasPreviousPage ? "" : "disabled")"
+                   asp-route-page="@(Model.PageIndex - 1)"
+                   asp-route-search="@search">Previous</a>
+                <a class="btn btn-outline-secondary @(Model.HasNextPage ? "" : "disabled")"
+                   asp-route-page="@(Model.PageIndex + 1)"
+                   asp-route-search="@search">Next</a>
+            </div>
+        </nav>
+    }
+</div>

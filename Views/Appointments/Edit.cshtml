@@ -1,0 +1,98 @@
+@model Project_Advanced.Models.Appointment
+@{
+    ViewData["Title"] = "Edit Appointment";
+    var isAdmin = (bool)(ViewBag.IsAdmin ?? false);
+    var minDate = DateTime.Now.Date.AddDays(1).ToString("yyyy-MM-ddTHH:mm");
+}
+
+<div class="container">
+    <h2 class="mb-3">@ViewData["Title"]</h2>
+    <div class="row">
+        <div class="col-lg-6">
+            <form asp-action="Edit" class="card card-body shadow-sm">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                @if (isAdmin)
+                {
+                    <div class="mb-3">
+                        <label asp-for="CustomerId" class="form-label">Customer</label>
+                        <select asp-for="CustomerId" class="form-select" asp-items="ViewBag.CustomerId" id="customerSelect"></select>
+                        <span asp-validation-for="CustomerId" class="text-danger"></span>
+                    </div>
+                }
+                else
+                {
+                    <input asp-for="CustomerId" type="hidden" />
+                }
+
+                <div class="mb-3">
+                    <label asp-for="VehicleId" class="form-label">Vehicle</label>
+                    <select asp-for="VehicleId" class="form-select" id="vehicleSelect">
+                        <option value="">-- Select vehicle --</option>
+                        @if (isAdmin && ViewBag.VehicleOptions is IEnumerable<dynamic> vehicles)
+                        {
+                            foreach (var v in vehicles)
+                            {
+                                <option value="@v.Id" data-customer="@v.CustomerId">@v.Label</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="VehicleId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="AppointmentDate" class="form-label">Date &amp; time</label>
+                    <input asp-for="AppointmentDate" class="form-control" type="datetime-local" min="@minDate" />
+                    <span asp-validation-for="AppointmentDate" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Reason" class="form-label">Reason</label>
+                    <textarea asp-for="Reason" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Reason" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Status" class="form-label">Status</label>
+                    <select asp-for="Status" class="form-select" asp-items="Html.GetEnumSelectList<Project_Advanced.Models.AppointmentStatus>()"></select>
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
+               <input type="hidden" asp-for="Id" />
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a class="btn btn-outline-secondary" asp-action="Index">Back to list</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (function () {
+            const customerSelect = document.getElementById('customerSelect');
+            const vehicleSelect = document.getElementById('vehicleSelect');
+            if (!customerSelect || !vehicleSelect) return;
+
+            const selectedValue = '@Model.VehicleId';
+            const allOptions = Array.from(vehicleSelect.options).filter(o => o.value !== "");
+
+            function filterVehicles() {
+                const customerId = customerSelect.value;
+                const current = vehicleSelect.value || selectedValue;
+                vehicleSelect.innerHTML = '<option value="">-- Select vehicle --</option>';
+                allOptions
+                    .filter(o => !customerId || o.dataset.customer === customerId)
+                    .forEach(o => vehicleSelect.appendChild(o.cloneNode(true)));
+                if (current) {
+                    const match = Array.from(vehicleSelect.options).find(o => o.value === current);
+                    if (match) match.selected = true;
+                }
+            }
+
+            customerSelect.addEventListener('change', filterVehicles);
+            filterVehicles();
+        })();
+    </script>
+}

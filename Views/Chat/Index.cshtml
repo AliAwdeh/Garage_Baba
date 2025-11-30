@@ -1,0 +1,82 @@
+@model Project_Advanced.Models.ViewModels.PaginatedList<Project_Advanced.Models.ChatConversation>
+
+@{
+    ViewData["Title"] = "Chats";
+    var search = ViewBag.Search as string;
+}
+
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-column flex-md-row gap-2">
+        <div>
+            <h2 class="mb-1">Chat Conversations</h2>
+            <div class="text-muted small">Stay organized with your issue threads.</div>
+        </div>
+    </div>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-12 col-md-8 col-lg-6">
+            <input type="text" name="search" value="@search" class="form-control"
+                   placeholder="Search by title or context..." />
+        </div>
+        <div class="col-6 col-md-2 col-lg-2">
+            <button class="btn btn-outline-primary w-100">Search</button>
+        </div>
+    </form>
+
+    <form asp-action="Create" method="post" class="card card-body mb-3 shadow-sm">
+        <h5 class="card-title">New Conversation</h5>
+        <div class="mb-2">
+            <label class="form-label">Title</label>
+            <input name="title" class="form-control" placeholder="Brake noise on highway" />
+        </div>
+        <div class="mb-2">
+            <label class="form-label">Issue context (optional)</label>
+            <textarea name="issueContext" class="form-control" rows="2" placeholder="Any details that help the assistant..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Start</button>
+    </form>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">No conversations yet. Create one above.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var c in Model)
+            {
+                <div class="col-12">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="fw-semibold">@c.Title</div>
+                                <div class="text-muted small">
+                                    Created @c.CreatedAt.ToLocalTime().ToString("g") • Updated @(c.UpdatedAt?.ToLocalTime().ToString("g") ?? "-")
+                                </div>
+                                <div class="text-muted small">@((c.Messages?.Count ?? 0)) messages</div>
+                            </div>
+                            <div class="ms-md-auto">
+                                <a asp-action="Conversation" asp-route-id="@c.Id" class="btn btn-outline-primary btn-sm">Open</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">Page @Model.PageIndex of @Model.TotalPages</div>
+            <div class="btn-group">
+                <a class="btn btn-outline-secondary @(Model.HasPreviousPage ? "" : "disabled")"
+                   asp-route-page="@(Model.PageIndex - 1)"
+                   asp-route-search="@search">Previous</a>
+                <a class="btn btn-outline-secondary @(Model.HasNextPage ? "" : "disabled")"
+                   asp-route-page="@(Model.PageIndex + 1)"
+                   asp-route-search="@search">Next</a>
+            </div>
+        </nav>
+    }
+</div>

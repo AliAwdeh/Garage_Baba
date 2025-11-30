@@ -1,0 +1,192 @@
+@model Project_Advanced.Models.Appointment
+
+@{
+    ViewData["Title"] = "Create Appointment";
+    var isAdmin = (bool)(ViewBag.IsAdmin ?? false);
+    var minDate = DateTime.Now.Date.AddDays(1).ToString("yyyy-MM-dd");
+}
+
+<div class="container">
+    <h2 class="mb-3">@ViewData["Title"]</h2>
+    <div class="row">
+        <div class="col-lg-6">
+            <form asp-action="Create" class="card card-body shadow-sm">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                @if (isAdmin)
+                {
+                    <div class="mb-3">
+                        <label asp-for="CustomerId" class="form-label">Customer</label>
+                        <select asp-for="CustomerId"
+                                class="form-select"
+                                asp-items="ViewBag.CustomerId">
+                        </select>
+                        <span asp-validation-for="CustomerId" class="text-danger"></span>
+                    </div>
+                }
+                else
+                {
+                    <input asp-for="CustomerId" type="hidden" />
+                }
+
+                <div class="mb-3">
+                    <label asp-for="VehicleId" class="form-label">Vehicle</label>
+                    <select asp-for="VehicleId" class="form-select">
+                        <option value="">-- Select vehicle --</option>
+                        @if (isAdmin && ViewBag.VehicleOptions is IEnumerable<dynamic> vehicles)
+                        {
+                            foreach (var v in vehicles)
+                            {
+                                <option value="@v.Id" data-customer="@v.CustomerId">@v.Label</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="VehicleId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Date</label>
+                    <input id="appointmentDate"
+                           class="form-control"
+                           type="date"
+                           min="@minDate"
+                           value="@minDate" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Time</label>
+                    <select id="appointmentTime" class="form-select">
+                        <!-- options filled by JS -->
+                    </select>
+                    <div id="noSlotsMessage" class="text-muted" style="display:none;">
+                        No available time slots for this date. Please choose another day.
+                    </div>
+                </div>
+
+                <!-- Real field bound to model -->
+                <input asp-for="AppointmentDate" type="hidden" id="AppointmentDateHidden" />
+                <span asp-validation-for="AppointmentDate" class="text-danger"></span>
+
+                <div class="mb-3">
+                    <label asp-for="Reason" class="form-label">Reason</label>
+                    <textarea asp-for="Reason" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Reason" class="text-danger"></span>
+                </div>
+
+                @if (isAdmin)
+                {
+                    <div class="mb-3">
+                        <label asp-for="Status" class="form-label">Status</label>
+                        <select asp-for="Status"
+                                class="form-select"
+                                asp-items="Html.GetEnumSelectList<Project_Advanced.Models.AppointmentStatus>()">
+                        </select>
+                        <span asp-validation-for="Status" class="text-danger"></span>
+                    </div>
+                }
+                else
+                {
+                    <input asp-for="Status" type="hidden" />
+                }
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a class="btn btn-outline-secondary" asp-action="Index">Back to list</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script>
+        (function () {
+            // === Vehicle filtering for Admin (by customer) ===
+            const customerSelect = document.getElementById('CustomerId');
+            const vehicleSelect = document.getElementById('VehicleId');
+
+            if (customerSelect && vehicleSelect) {
+                const allOptions = Array.from(vehicleSelect.options)
+                    .filter(o => o.value !== "");
+
+                function filterVehicles() {
+                    const customerId = customerSelect.value;
+                    vehicleSelect.innerHTML = '<option value="">-- Select vehicle --</option>';
+                    allOptions
+                        .filter(o => !customerId || o.dataset.customer === customerId)
+                        .forEach(o => vehicleSelect.appendChild(o.cloneNode(true)));
+                }
+
+                customerSelect.addEventListener('change', filterVehicles);
+                filterVehicles();
+            }
+
+            // === Date + time slot logic (1-hour increments) ===
+            const dateInput = document.getElementById('appointmentDate');
+            const timeSelect = document.getElementById('appointmentTime');
+            const hiddenDateTime = document.getElementById('AppointmentDateHidden');
+            const noSlotsMessage = document.getElementById('noSlotsMessage');
+
+            async function loadSlots() {
+                const dateValue = dateInput.value;
+                timeSelect.innerHTML = '';
+                noSlotsMessage.style.display = 'none';
+
+                if (!dateValue) {
+                    hiddenDateTime.value = '';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/Appointments/GetAvailableSlots?date=${dateValue}`);
+                    if (!response.ok) {
+                        console.warn('Failed to load slots');
+                        return;
+                    }
+
+                    const slots = await response.json();
+
+                    if (!slots || slots.length === 0) {
+                        noSlotsMessage.style.display = 'block';
+                        hiddenDateTime.value = '';
+                        return;
+                    }
+
+                    slots.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t;
+                        opt.textContent = t;
+                        timeSelect.appendChild(opt);
+                    });
+
+                    updateHidden();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            function updateHidden() {
+                const dateValue = dateInput.value;
+                const timeValue = timeSelect.value;
+                if (!dateValue || !timeValue) {
+                    hiddenDateTime.value = '';
+                    return;
+                }
+                // Combine into a single local datetime string
+                hiddenDateTime.value = `${dateValue}T${timeValue}:00`;
+            }
+
+            if (dateInput && timeSelect && hiddenDateTime) {
+                dateInput.addEventListener('change', loadSlots);
+                timeSelect.addEventListener('change', updateHidden);
+
+                // Pre-load slots for default date (tomorrow)
+                if (dateInput.value) {
+                    loadSlots();
+                }
+            }
+        })();
+    </script>
+}

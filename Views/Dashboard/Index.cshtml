@@ -1,0 +1,117 @@
+@model Project_Advanced.Models.ViewModels.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Dashboard</h2>
+        <span class="text-muted">@DateTime.Now.ToString("dddd, MMM dd")</span>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">New Work Orders</h5>
+                    <p class="mb-1">Today: <strong>@Model.WorkOrdersCreatedToday</strong></p>
+                    <p class="mb-1">This week: <strong>@Model.WorkOrdersCreatedThisWeek</strong></p>
+                    <p class="mb-0">This month: <strong>@Model.WorkOrdersCreatedThisMonth</strong></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Closed Work Orders</h5>
+                    <p class="mb-1">Today: <strong>@Model.WorkOrdersClosedToday</strong></p>
+                    <p class="mb-1">This week: <strong>@Model.WorkOrdersClosedThisWeek</strong></p>
+                    <p class="mb-0">This month: <strong>@Model.WorkOrdersClosedThisMonth</strong></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Sales (payments)</h5>
+                    <p class="mb-1">Today: <strong>@Model.SalesToday.ToString("C")</strong></p>
+                    <p class="mb-1">This week: <strong>@Model.SalesThisWeek.ToString("C")</strong></p>
+                    <p class="mb-0">This month: <strong>@Model.SalesThisMonth.ToString("C")</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-3">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Revenue Mix (all time)</h5>
+                    <p class="mb-1">Labor: <strong>@Model.LaborRevenueTotal.ToString("C")</strong></p>
+                    <p class="mb-0">Parts: <strong>@Model.PartsRevenueTotal.ToString("C")</strong></p>
+                    <div class="mt-3 border-top pt-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Outstanding invoices</span>
+                            <span class="fw-semibold text-danger">@Model.OutstandingTotal.ToString("C")</span>
+                        </div>
+                        @if (!Model.OutstandingInvoices.Any())
+                        {
+                            <div class="text-muted small">None</div>
+                        }
+                        else
+                        {
+                            <ul class="list-unstyled mb-0 small mt-2">
+                            @foreach (var inv in Model.OutstandingInvoices)
+                            {
+                                <li class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="fw-semibold">Invoice #@inv.Invoice.Id (@($"{inv.Invoice.Customer?.FirstName} {inv.Invoice.Customer?.LastName}"))</div>
+                                        <div class="text-muted">@inv.Invoice.WorkOrder?.Vehicle?.PlateNumber @inv.Invoice.WorkOrder?.Vehicle?.Make @inv.Invoice.WorkOrder?.Vehicle?.Model</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-danger">@inv.Outstanding.ToString("C")</div>
+                                        <div class="text-muted">Paid @inv.Paid.ToString("C")</div>
+                                    </div>
+                                </li>
+                            }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Today's Appointments</h5>
+                    @if (!Model.TodaysAppointments.Any())
+                    {
+                        <p class="text-muted mb-0">No appointments today.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                        @foreach (var appt in Model.TodaysAppointments)
+                        {
+                            <li class="list-group-item">
+                                <div class="fw-semibold">@appt.AppointmentDate.ToString("t") - @appt.Customer?.FirstName @appt.Customer?.LastName</div>
+                                <div class="small text-muted">
+                                    @if (!string.IsNullOrWhiteSpace(appt.Vehicle?.PlateNumber))
+                                    {
+                                        @($"{appt.Vehicle?.PlateNumber} ({appt.Vehicle?.Make} {appt.Vehicle?.Model})")
+                                    }
+                                    else
+                                    {
+                                        @("No vehicle info")
+                                    }
+                                </div>
+                                <div class="small">@(!string.IsNullOrWhiteSpace(appt.Reason) ? appt.Reason : "No reason provided")</div>
+                            </li>
+                        }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

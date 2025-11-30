@@ -1,0 +1,45 @@
+@model Project_Advanced.Models.WorkOrder
+@{
+    ViewData["Title"] = "Create Work Order";
+}
+
+<div class="container">
+    <h2 class="mb-3">@ViewData["Title"]</h2>
+    <div class="row">
+        <div class="col-lg-6">
+            <form asp-action="Create" class="card card-body shadow-sm">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <label asp-for="VehicleId" class="form-label">Vehicle</label>
+                    <select asp-for="VehicleId" class="form-select" asp-items="ViewBag.VehicleId" required>
+                        <option value="">-- Select vehicle --</option>
+                    </select>
+                    <span asp-validation-for="VehicleId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ProblemDescription" class="form-label">Problem Description</label>
+                    <textarea asp-for="ProblemDescription" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="ProblemDescription" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="RecordedOdometer" class="form-label">Recorded Odometer</label>
+                    <input asp-for="RecordedOdometer" class="form-control" />
+                    <span asp-validation-for="RecordedOdometer" class="text-danger"></span>
+                </div>
+
+                <input asp-for="Status" type="hidden" />
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                    <a class="btn btn-outline-secondary" asp-action="Index">Back to list</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

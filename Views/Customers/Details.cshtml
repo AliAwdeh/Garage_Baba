@@ -1,0 +1,41 @@
+@model Project_Advanced.Models.Customer
+
+@{
+    ViewData["Title"] = "Customer Details";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title mb-3">@ViewData["Title"]</h2>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4 col-lg-3 text-muted">First name</dt>
+                        <dd class="col-sm-8 col-lg-9">@Model.FirstName</dd>
+
+                        <dt class="col-sm-4 col-lg-3 text-muted">Last name</dt>
+                        <dd class="col-sm-8 col-lg-9">@Model.LastName</dd>
+
+                        <dt class="col-sm-4 col-lg-3 text-muted">Phone</dt>
+                        <dd class="col-sm-8 col-lg-9">@Model.Phone</dd>
+
+                        <dt class="col-sm-4 col-lg-3 text-muted">Email</dt>
+                        <dd class="col-sm-8 col-lg-9">@Model.Email</dd>
+
+                        <dt class="col-sm-4 col-lg-3 text-muted">Address</dt>
+                        <dd class="col-sm-8 col-lg-9">@Model.Address</dd>
+
+                        <dt class="col-sm-4 col-lg-3 text-muted">User Id</dt>
+                        <dd class="col-sm-8 col-lg-9 text-muted">@Model.ApplicationUserId</dd>
+                    </dl>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model?.Id">Edit</a>
+                        <a class="btn btn-outline-secondary" asp-action="Index">Back to list</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

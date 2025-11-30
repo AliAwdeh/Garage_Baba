@@ -1,0 +1,78 @@
+@model Project_Advanced.Models.ViewModels.PaginatedList<Project_Advanced.Models.Appointment>
+
+@{
+    ViewData["Title"] = "Appointments";
+    var search = ViewData["search"] as string;
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-column flex-md-row gap-2">
+        <div>
+            <h2 class="mb-0">@ViewData["Title"]</h2>
+            <div class="text-muted small">Latest first</div>
+        </div>
+        <div class="d-flex flex-column flex-md-row gap-2">
+            <form class="d-flex gap-2" method="get" asp-action="Index">
+                <input class="form-control" type="search" name="search" value="@search" placeholder="Search reason, customer, vehicle" />
+                <button class="btn btn-outline-secondary" type="submit">Search</button>
+            </form>
+            <a class="btn btn-primary" asp-action="Create">Create Appointment</a>
+        </div>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Customer</th>
+                            <th>Vehicle</th>
+                            <th>Date</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@($"{item.Customer?.FirstName} {item.Customer?.LastName}")</td>
+                            <td>@(item.Vehicle != null ? $"{item.Vehicle.PlateNumber} - {item.Vehicle.Make} {item.Vehicle.Model}" : "-")</td>
+                            <td>@item.AppointmentDate.ToString("g")</td>
+                            <td>@item.Reason</td>
+                            <td>@item.Status</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@item.Id">Details</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@item.Id">Edit</a>
+                                <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">No appointments found.</div>
+    }
+
+    @if (Model != null && Model.TotalPages > 1)
+    {
+        <nav class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">Page @Model.PageIndex of @Model.TotalPages</div>
+            <div class="btn-group">
+                <a class="btn btn-outline-secondary @(Model.HasPreviousPage ? "" : "disabled")"
+                   asp-route-page="@(Model.PageIndex - 1)"
+                   asp-route-search="@search">Previous</a>
+                <a class="btn btn-outline-secondary @(Model.HasNextPage ? "" : "disabled")"
+                   asp-route-page="@(Model.PageIndex + 1)"
+                   asp-route-search="@search">Next</a>
+            </div>
+        </nav>
+    }
+</div>

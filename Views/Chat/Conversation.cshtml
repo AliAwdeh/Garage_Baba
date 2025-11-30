@@ -1,0 +1,529 @@
+@model Project_Advanced.Models.ChatConversation
+
+@{
+    ViewData["Title"] = Model.Title ?? "Conversation";
+}
+
+<style>
+    :root {
+        --chat-bg: #f3f4f6;
+        --chat-border: #e5e7eb;
+        --assistant-bg: #ffffff;
+        --user-bg: #0d6efd;
+    }
+
+.chat-page {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 0.75rem;
+    background-color: var(--chat-bg);
+
+    /* NEW: take the full viewport height (minus navbar if needed) */
+    height: calc(100vh - 64px); /* adjust 64px to your layout's header height */
+    overflow: hidden;           /* prevent the main page from scrolling */
+}
+
+.chat-shell {
+    width: 100%;
+    max-width: 980px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+
+    height: 100%;      /* fill the .chat-page height */
+    max-height: 100%;  /* no extra vertical overflow */
+}
+
+
+    .chat-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--chat-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .chat-header-title {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-header-title h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .chat-header-title .subtitle {
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+
+    .chat-header-actions .btn {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.6rem;
+    }
+
+    .chat-main {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        overflow: hidden;
+    }
+
+    .chat-context {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--chat-border);
+        background: #f9fafb;
+    }
+
+    .chat-context-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* allow text to shrink with ellipsis */
+    .chat-context-header > div:first-child {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .chat-context-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        margin-bottom: 0.15rem;
+    }
+
+    /* ONE LINE + ELLIPSIS */
+    .chat-context-text {
+        font-size: 0.85rem;
+        color: #374151;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chat-context-empty {
+        font-size: 0.85rem;
+        color: #9ca3af;
+        font-style: italic;
+        white-space: normal;
+    }
+
+    .chat-context-toggle-btn {
+        font-size: 0.75rem;
+        padding: 0.1rem 0.55rem;
+        flex-shrink: 0;
+    }
+
+    .chat-context-form {
+        margin-top: 0.75rem;
+        border-top: 1px dashed #e5e7eb;
+        padding-top: 0.75rem;
+    }
+
+    .chat-history-wrapper {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 0.75rem 0.75rem 1rem;
+        background: var(--chat-bg);
+        scroll-behavior: smooth;
+    }
+
+    .chat-message {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        align-items: flex-start;
+    }
+
+    /* ChatGPT-ish: AI on left, user on right but not full-width crazy */
+    .chat-message.assistant {
+        justify-content: flex-start;
+    }
+
+    .chat-message.user {
+        justify-content: flex-end;
+    }
+
+    .chat-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .chat-avatar.assistant {
+        background: #e5e7eb;
+        color: #111827;
+    }
+
+    .chat-avatar.user {
+        background: #0d6efd;
+        color: #ffffff;
+    }
+
+    .chat-bubble {
+        padding: 0.55rem 0.8rem;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        font-size: 0.9rem;
+        line-height: 1.35;
+
+        /* FIX THE OVERSIZED PROBLEM */
+        white-space: normal;     /* instead of pre-wrap */
+        overflow-wrap: break-word;
+        word-break: break-word;
+
+        max-width: 55%;          /* same as ChatGPT */
+    }
+
+
+    .chat-bubble.assistant {
+        background: var(--assistant-bg);
+        border-color: var(--chat-border);
+        color: #111827;
+    }
+
+    .chat-bubble.user {
+        background: var(--user-bg);
+        color: #ffffff;
+    }
+
+    .chat-meta {
+        font-size: 0.7rem;
+        margin-bottom: 0.1rem;
+        opacity: 0.7;
+    }
+
+    .chat-meta.user {
+        color: #d1d5db;
+    }
+
+    .chat-meta.assistant {
+        color: #6b7280;
+    }
+
+    .chat-input-wrapper {
+        border-top: 1px solid var(--chat-border);
+        padding: 0.75rem 1rem;
+        background: #ffffff;
+    }
+
+    .chat-input-box {
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        padding: 0.4rem 0.6rem;
+    }
+
+    .chat-input-box textarea {
+        border: none;
+        background: transparent;
+        resize: none;
+        min-height: 60px;
+        max-height: 140px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.9rem;
+        outline: none;
+        box-shadow: none;
+    }
+
+    .chat-input-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .chat-input-hint {
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+
+    .chat-input-buttons .btn {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.7rem;
+    }
+
+    .chat-status {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+@@media (max-width: 768px) {
+    .chat-shell {
+        height: 100%;
+        max-height: 100%;
+    }
+}
+
+
+        .chat-header {
+            padding: 0.6rem 0.75rem;
+        }
+
+        .chat-context,
+        .chat-history-wrapper,
+        .chat-input-wrapper {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .chat-bubble {
+            max-width: 100%;
+        }
+    }
+</style>
+
+<div class="chat-page">
+    <div class="chat-shell">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="chat-header-title">
+                <h2>@(Model.Title ?? "Issue assistant chat")</h2>
+                <div class="subtitle">Admin-only issue assistant • Saved conversation</div>
+            </div>
+            <div class="chat-header-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to chats</a>
+            </div>
+        </div>
+
+        <!-- Main: context + history -->
+        <div class="chat-main">
+            <!-- Context bar -->
+            <div class="chat-context">
+                <div class="chat-context-header">
+                    <div>
+                        <div class="chat-context-title">Issue context</div>
+                        <div class="chat-context-text" title="@Model.IssueContext">
+                            @if (string.IsNullOrWhiteSpace(Model.IssueContext))
+                            {
+                                <span class="chat-context-empty">
+                                    No context set yet. Use the button to define the high-level issue or case.
+                                </span>
+                            }
+                            else
+                            {
+                                @Model.IssueContext
+                            }
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-secondary chat-context-toggle-btn"
+                            type="button"
+                            onclick="document.getElementById('contextForm').classList.toggle('d-none');">
+                        Edit
+                    </button>
+                </div>
+
+                <form id="contextForm"
+                      asp-action="UpdateContext"
+                      method="post"
+                      class="chat-context-form d-none">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="mb-2">
+                        <label class="form-label mb-1">Title</label>
+                        <input name="title" class="form-control form-control-sm" value="@Model.Title" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label mb-1">Issue context</label>
+                        <textarea name="issueContext"
+                                  class="form-control form-control-sm"
+                                  rows="3">@Model.IssueContext</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Save context</button>
+                </form>
+            </div>
+
+            <!-- Chat history -->
+            <div class="chat-history-wrapper" id="chatHistory">
+                @if (!Model.Messages.Any())
+                {
+                    <p class="text-muted mb-0" style="font-size:0.9rem;">
+                        No messages yet. Set an issue context if you like, then start chatting below.
+                    </p>
+                }
+                else
+                {
+                    foreach (var m in Model.Messages.OrderBy(m => m.CreatedAt))
+                    {
+                        var isAssistant = m.Sender == "assistant";
+                        <div class="chat-message @(isAssistant ? "assistant" : "user")">
+                            <div class="chat-avatar @(isAssistant ? "assistant" : "user")">
+                                @(isAssistant ? "AI" : "You")
+                            </div>
+                            <div class="chat-bubble @(isAssistant ? "assistant" : "user")">
+                                <div class="chat-meta @(isAssistant ? "assistant" : "user")">
+                                    @(isAssistant ? "Assistant" : "You")
+                                    • @m.CreatedAt.ToLocalTime().ToString("g")
+                                </div>
+                                <div class="chat-content" data-raw="@m.Content">@m.Content</div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Input area -->
+            <div class="chat-input-wrapper">
+                <form id="chatForm" asp-action="SendMessageApi" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+
+                    <div class="chat-input-box">
+                        <textarea name="message"
+                                  rows="2"
+                                  class="form-control"
+                                  placeholder="Send a message..."
+                                  required></textarea>
+                        <div class="chat-input-actions mt-1">
+                            <div class="chat-input-hint">
+                                Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for a new line.
+                            </div>
+                            <div class="chat-input-buttons">
+                                @* <button type="button"
+                                        class="btn btn-outline-secondary me-1"
+                                        onclick="const h=document.getElementById('chatHistory'); h.scrollTop = h.scrollHeight;">
+                                    Scroll to bottom
+                                </button> *@
+                                <button type="submit" class="btn btn-primary">
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-status" id="chatStatus"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<script>
+    (function () {
+        const historyEl = document.getElementById('chatHistory');
+        const form = document.getElementById('chatForm');
+        const statusEl = document.getElementById('chatStatus');
+        const textarea = form.querySelector('textarea[name="message"]');
+        const sendButton = form.querySelector('button[type="submit"]');
+
+        function renderMarkdown(raw) {
+            const html = marked.parse(raw || "");
+            return DOMPurify.sanitize(html);
+        }
+
+        // Render existing messages as markdown
+        document.querySelectorAll('.chat-content').forEach(el => {
+            const raw = el.getAttribute('data-raw') || el.innerText;
+            el.innerHTML = renderMarkdown(raw);
+        });
+
+        function addBubble(content, createdAt, isAssistant, isPending) {
+            const row = document.createElement('div');
+            row.className = 'chat-message ' + (isAssistant ? 'assistant' : 'user');
+
+            const avatar = document.createElement('div');
+            avatar.className = 'chat-avatar ' + (isAssistant ? 'assistant' : 'user');
+            avatar.textContent = isAssistant ? 'AI' : 'You';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble ' + (isAssistant ? 'assistant' : 'user');
+
+            const meta = document.createElement('div');
+            meta.className = 'chat-meta ' + (isAssistant ? 'assistant' : 'user');
+            meta.textContent = (isAssistant ? 'Assistant' : 'You') + ' • ' + (createdAt || '...') + (isPending ? ' (typing)' : '');
+
+            const body = document.createElement('div');
+            body.className = 'chat-content';
+            body.innerHTML = isPending ? content : renderMarkdown(content);
+
+            bubble.appendChild(meta);
+            bubble.appendChild(body);
+            row.appendChild(avatar);
+            row.appendChild(bubble);
+
+            historyEl.appendChild(row);
+            historyEl.scrollTop = historyEl.scrollHeight;
+            return body;
+        }
+
+        // Enter to send, Shift+Enter for newline
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.requestSubmit();
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = new FormData(form);
+            const message = data.get('message');
+            if (!message || !message.toString().trim()) return;
+
+            statusEl.textContent = '';
+            const userText = message.toString().trim();
+
+            // Add user bubble immediately
+            addBubble(userText, new Date().toLocaleString(), false, false);
+
+            // Clear textarea
+            textarea.value = '';
+
+            // Show assistant typing bubble
+            const typingBody = addBubble('...', '', true, true);
+
+            // Disable send while processing
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: data
+                });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    typingBody.innerHTML = renderMarkdown('**Error:** ' + text);
+                } else {
+                    const result = await response.json();
+                    // remove typing bubble (its parent is bubble -> row)
+                    const typingRow = typingBody.closest('.chat-message');
+                    if (typingRow) typingRow.remove();
+
+                    addBubble(result.assistant.content, result.assistant.createdAt, true, false);
+                }
+            } catch (err) {
+                typingBody.innerHTML = renderMarkdown('**Error:** ' + (err.message || err.toString()));
+            } finally {
+                sendButton.disabled = false;
+                textarea.focus();
+            }
+        });
+
+        // Scroll to bottom on load
+        historyEl.scrollTop = historyEl.scrollHeight;
+        textarea.focus();
+    })();
+</script>

@@ -1,0 +1,191 @@
+﻿@model Project_Advanced.Models.ViewModels.CustomerDashboardViewModel
+
+@{
+    ViewData["Title"] = "My Garage Overview";
+}
+
+<div class="container py-3">
+    <h2 class="mb-3">Welcome, @Model.CustomerName</h2>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Outstanding Payments</h5>
+                    <p class="display-6 fw-bold mb-0">
+                        @Model.TotalOutstanding.ToString("0.00") <small class="fs-6">USD</small>
+                    </p>
+                    <small class="text-muted">Total unpaid amount across your invoices.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Today's Appointments</h5>
+                    <p class="display-6 fw-bold mb-0">@Model.TodayAppointments.Count</p>
+                    <small class="text-muted">Appointments scheduled for today.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Open Work Orders</h5>
+                    <p class="display-6 fw-bold mb-0">@Model.OpenWorkOrders.Count</p>
+                    <small class="text-muted">Work orders that are not completed or invoiced yet.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Outstanding invoices -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Outstanding Invoices</span>
+                    <a asp-controller="Payments" asp-action="MyPayments" class="btn btn-sm btn-outline-primary">
+                        View payments
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.OutstandingInvoices.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice</th>
+                                        <th>Vehicle</th>
+                                        <th class="text-end">Outstanding</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var inv in Model.OutstandingInvoices)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-controller="Invoices"
+                                               asp-action="Details"
+                                               asp-route-id="@inv.InvoiceId">
+                                                #@inv.InvoiceId
+                                            </a><br />
+                                            <small class="text-muted">
+                                                @inv.IssuedAt.ToString("g") (@inv.Status)
+                                            </small>
+                                        </td>
+                                        <td>@inv.Vehicle</td>
+                                        <td class="text-end">
+                                            @inv.OutstandingAmount.ToString("0.00")
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted">You have no outstanding invoices 🎉</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's appointments -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Today's Appointments
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.TodayAppointments.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Vehicle</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var appt in Model.TodayAppointments)
+                                {
+                                    <tr>
+                                        <td>@appt.AppointmentDate.ToString("t")</td>
+                                        <td>@appt.Vehicle</td>
+                                        <td>@appt.Reason</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted">You have no appointments today.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <!-- Open work orders -->
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Open Work Orders</span>
+                    <a asp-controller="WorkOrders" asp-action="Index" class="btn btn-sm btn-outline-primary">
+                        View all
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.OpenWorkOrders.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Vehicle</th>
+                                        <th>Created</th>
+                                        <th>Problem</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var wo in Model.OpenWorkOrders)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-controller="WorkOrders"
+                                               asp-action="Details"
+                                               asp-route-id="@wo.WorkOrderId">
+                                                #@wo.WorkOrderId
+                                            </a>
+                                        </td>
+                                        <td>@wo.Vehicle</td>
+                                        <td>@wo.CreatedAt.ToString("g")</td>
+                                        <td>@wo.ProblemDescription</td>
+                                        <td>@wo.Status</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted">You have no open work orders.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

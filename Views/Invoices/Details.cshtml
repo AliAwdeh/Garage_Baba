@@ -1,0 +1,145 @@
+@model Project_Advanced.Models.Invoice
+@{
+    ViewData["Title"] = "Invoice Details";
+    var paymentsTotal = Model.Payments?.Sum(p => p.Amount) ?? 0;
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">@ViewData["Title"]</h2>
+        <div class="d-flex gap-2">
+            @if (User.IsInRole("Admin"))
+            {
+                <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model?.Id">Edit</a>
+            }
+            <a class="btn btn-outline-secondary" asp-action="Index">Back to list</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Invoice</h5>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Invoice #</dt>
+                        <dd class="col-sm-8">@Model.Id</dd>
+
+                        <dt class="col-sm-4">Work Order</dt>
+                        <dd class="col-sm-8">@($"{Model.WorkOrder?.Id} - {Model.WorkOrder?.Vehicle?.PlateNumber}")</dd>
+
+                        <dt class="col-sm-4">Customer</dt>
+                        <dd class="col-sm-8">@($"{Model.Customer?.FirstName} {Model.Customer?.LastName}")</dd>
+
+                        <dt class="col-sm-4">Issued</dt>
+                        <dd class="col-sm-8">@Model.IssuedAt.ToLocalTime().ToString("f")</dd>
+
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">@Model.Status</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Totals</h5>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Subtotal</dt>
+                        <dd class="col-sm-7">@Model.Subtotal.ToString("C")</dd>
+                        <dt class="col-sm-5">Tax</dt>
+                        <dd class="col-sm-7">@Model.TaxAmount.ToString("C")</dd>
+                        <dt class="col-sm-5">Discount</dt>
+                        <dd class="col-sm-7">-@Model.Discount.ToString("C")</dd>
+                        <dt class="col-sm-5 fw-semibold">Total</dt>
+                        <dd class="col-sm-7 fw-semibold">@Model.Total.ToString("C")</dd>
+                        <dt class="col-sm-5">Payments</dt>
+                        <dd class="col-sm-7">@paymentsTotal.ToString("C")</dd>
+                        <dt class="col-sm-5">Balance</dt>
+                        <dd class="col-sm-7 fw-semibold">@((Model.Total - paymentsTotal).ToString("C"))</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Work Order Items</h5>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Qty</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (Model.WorkOrder?.Items != null && Model.WorkOrder.Items.Any())
+                    {
+                        foreach (var item in Model.WorkOrder.Items)
+                        {
+                            <tr>
+                                <td>@item.ItemType</td>
+                                <td>@item.Description</td>
+                                <td>@item.Quantity</td>
+                                <td>@string.Format("{0:C}", item.UnitPrice)</td>
+                                <td>@string.Format("{0:C}", item.Quantity * item.UnitPrice)</td>
+                            </tr>
+                        }
+                        <tr>
+                            <td colspan="4" class="text-end fw-semibold">Items Total</td>
+                            <td class="fw-semibold">@string.Format("{0:C}", Model.WorkOrder.Items.Sum(i => i.Quantity * i.UnitPrice))</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No items on the work order.</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Payments</h5>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (Model.Payments != null && Model.Payments.Any())
+                    {
+                        foreach (var payment in Model.Payments.OrderByDescending(p => p.PaidAt))
+                        {
+                            <tr>
+                                <td>@payment.PaidAt.ToLocalTime().ToString("g")</td>
+                                <td>@payment.Amount.ToString("C")</td>
+                                <td>@payment.Method</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No payments recorded.</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
