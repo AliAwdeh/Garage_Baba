@@ -8,10 +8,6 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0">@ViewData["Title"]</h2>
         <div class="d-flex gap-2">
-            @if (User.IsInRole("Admin"))
-            {
-                <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model?.Id">Edit</a>
-            }
             <a class="btn btn-outline-secondary" asp-action="Index">Back to list</a>
         </div>
     </div>
@@ -85,14 +81,14 @@
                             <tr>
                                 <td>@item.ItemType</td>
                                 <td>@item.Description</td>
-                                <td>@item.Quantity</td>
-                                <td>@string.Format("{0:C}", item.UnitPrice)</td>
-                                <td>@string.Format("{0:C}", item.Quantity * item.UnitPrice)</td>
+                                <td>@item.Quantity.ToString("0.00")</td>
+                                <td>@string.Format("{0:0.00}", item.UnitPrice)</td>
+                                <td>@string.Format("{0:0.00}", item.Quantity * item.UnitPrice)</td>
                             </tr>
                         }
                         <tr>
                             <td colspan="4" class="text-end fw-semibold">Items Total</td>
-                            <td class="fw-semibold">@string.Format("{0:C}", Model.WorkOrder.Items.Sum(i => i.Quantity * i.UnitPrice))</td>
+                            <td class="fw-semibold">@string.Format("{0:0.00}", Model.WorkOrder.Items.Sum(i => i.Quantity * i.UnitPrice))</td>
                         </tr>
                     }
                     else

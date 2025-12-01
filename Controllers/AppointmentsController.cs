@@ -467,7 +467,8 @@ public async Task<IActionResult> GetAvailableSlots(DateTime date)
                 .Select(c => new
                 {
                     c.Id,
-                    Name = $"{c.FirstName} {c.LastName} ({c.Email})"
+                    Name = $"{c.FirstName} {c.LastName} ({c.Email})",
+                    Label = $"{c.FirstName} {c.LastName} - {(string.IsNullOrWhiteSpace(c.Phone) ? "No phone" : c.Phone)}{(string.IsNullOrWhiteSpace(c.Email) ? "" : $" ({c.Email})")}"
                 }).ToList();
 
             var vehicles = _context.Vehicles
@@ -479,8 +480,9 @@ public async Task<IActionResult> GetAvailableSlots(DateTime date)
                     v.CustomerId
                 }).ToList();
 
-            ViewData["CustomerId"] = new SelectList(customers, "Id", "Name", customerId);
+            ViewBag.CustomerOptions = customers;
             ViewBag.VehicleOptions = vehicles;
+            ViewData["CustomerId"] = new SelectList(customers, "Id", "Label", customerId);
             ViewData["VehicleId"] = new SelectList(vehicles, "Id", "Label", vehicleId);
         }
 

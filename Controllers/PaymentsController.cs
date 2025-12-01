@@ -99,7 +99,7 @@ namespace Project_Advanced.Controllers
         [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
-            ViewData["InvoiceId"] = new SelectList(_context.Invoices, "Id", "Id");
+            LoadInvoiceOptions();
             return View();
         }
 
@@ -140,7 +140,7 @@ namespace Project_Advanced.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["InvoiceId"] = new SelectList(_context.Invoices, "Id", "Id", payment.InvoiceId);
+            LoadInvoiceOptions(payment.InvoiceId);
             return View(payment);
         }
 
@@ -158,7 +158,7 @@ namespace Project_Advanced.Controllers
             {
                 return NotFound();
             }
-            ViewData["InvoiceId"] = new SelectList(_context.Invoices, "Id", "Id", payment.InvoiceId);
+            LoadInvoiceOptions(payment.InvoiceId);
             return View(payment);
         }
 
@@ -195,7 +195,7 @@ namespace Project_Advanced.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["InvoiceId"] = new SelectList(_context.Invoices, "Id", "Id", payment.InvoiceId);
+            LoadInvoiceOptions(payment.InvoiceId);
             return View(payment);
         }
 
@@ -246,6 +246,23 @@ namespace Project_Advanced.Controllers
             if (string.IsNullOrEmpty(userId)) return null;
 
             return await _context.Customers.FirstOrDefaultAsync(c => c.ApplicationUserId == userId);
+        }
+
+        private void LoadInvoiceOptions(int? selectedId = null)
+        {
+            var invoices = _context.Invoices
+                .Include(i => i.WorkOrder)
+                    .ThenInclude(w => w.Vehicle)
+                .Include(i => i.Customer)
+                .Select(i => new
+                {
+                    i.Id,
+                    Label = $"{i.Id} - {i.WorkOrder!.Vehicle!.PlateNumber} {i.WorkOrder.Vehicle.Make} {i.WorkOrder.Vehicle.Model} - {i.Customer!.FirstName} {i.Customer.LastName}"
+                })
+                .ToList();
+
+            ViewBag.InvoiceOptions = invoices;
+            ViewData["InvoiceId"] = new SelectList(invoices, "Id", "Label", selectedId);
         }
 
         // Customer Stripe payment kickoff: create Stripe Checkout Session

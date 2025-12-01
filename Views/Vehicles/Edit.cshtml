@@ -40,9 +40,28 @@
                 {
                     <div class="mb-3">
                         <label asp-for="CustomerId" class="form-label">Owner</label>
-                        <select asp-for="CustomerId" class="form-select" asp-items="ViewBag.CustomerId" required>
-                            <option value="">-- Select owner --</option>
-                        </select>
+                        <input type="hidden" asp-for="CustomerId" id="CustomerId" />
+                        @{
+                            var customerOptions = ViewBag.CustomerOptions as IEnumerable<dynamic>;
+                            var selectedOwnerLabel = customerOptions?.FirstOrDefault(o => o.Id == Model?.CustomerId)?.Label ?? "";
+                        }
+                        <input type="text"
+                               id="ownerSearch"
+                               class="form-control"
+                               list="ownerOptions"
+                               placeholder="Search owner by name or phone"
+                               value="@selectedOwnerLabel"
+                               autocomplete="off" />
+                        <datalist id="ownerOptions">
+                            @if (customerOptions != null)
+                            {
+                                foreach (var opt in customerOptions)
+                                {
+                                    <option value="@opt.Label" data-id="@opt.Id"></option>
+                                }
+                            }
+                        </datalist>
+                        <small class="form-text text-muted">Select an entry; the owner will be linked by ID.</small>
                         <span asp-validation-for="CustomerId" class="text-danger"></span>
                     </div>
                 }
@@ -63,4 +82,25 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (function () {
+            const ownerInput = document.getElementById('ownerSearch');
+            const ownerHidden = document.getElementById('CustomerId');
+            const options = document.querySelectorAll('#ownerOptions option');
+
+            function syncOwner() {
+                const val = ownerInput.value;
+                let match = null;
+                options.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                    }
+                });
+                ownerHidden.value = match || '';
+            }
+
+            ownerInput?.addEventListener('input', syncOwner);
+            ownerInput?.addEventListener('change', syncOwner);
+        })();
+    </script>
 }

@@ -20,9 +20,28 @@
 
             <div class="mb-3">
                 <label asp-for="VehicleId" class="form-label">Vehicle</label>
-                <select asp-for="VehicleId" class="form-select" asp-items="ViewBag.VehicleId" required>
-                    <option value="">-- Select vehicle --</option>
-                </select>
+                <input type="hidden" asp-for="VehicleId" id="VehicleId" />
+                @{
+                    var vehicleOptions = ViewBag.VehicleId as IEnumerable<SelectListItem>;
+                    var selectedVehicleLabel = vehicleOptions?.FirstOrDefault(v => v.Value == Model?.VehicleId.ToString())?.Text ?? "";
+                }
+                <input type="text"
+                       id="vehicleSearch"
+                       class="form-control"
+                       list="vehicleOptionsList"
+                       placeholder="Search by plate, make/model, or customer"
+                       value="@selectedVehicleLabel"
+                       autocomplete="off" />
+                <datalist id="vehicleOptionsList">
+                    @if (vehicleOptions != null)
+                    {
+                        foreach (var opt in vehicleOptions)
+                        {
+                            <option value="@opt.Text" data-id="@opt.Value"></option>
+                        }
+                    }
+                </datalist>
+                <small class="form-text text-muted">Select an entry; the vehicle will be linked by ID.</small>
                 <span asp-validation-for="VehicleId" class="text-danger"></span>
             </div>
 
@@ -78,6 +97,7 @@
                 <button type="submit" class="btn btn-outline-primary">Generate Invoice</button>
             </form>
         </div>
+
     </div>
 
     <div class="col-md-6">
@@ -149,16 +169,23 @@
 
             <div class="col-8" id="partSelectWrapper">
                 <label class="form-label">Part</label>
-                <select name="PartId" class="form-select">
-                    <option value="">-- Select Part --</option>
-                    @if (parts != null)
+                <input type="hidden" name="PartId" id="PartId" />
+                @{
+                    var partsList = parts ?? new List<Project_Advanced.Models.Part>();
+                }
+                <input type="text"
+                       id="partSearch"
+                       class="form-control"
+                       list="partOptionsList"
+                       placeholder="Search part by name"
+                       autocomplete="off" />
+                <datalist id="partOptionsList">
+                    @foreach (var p in partsList)
                     {
-                        foreach (var p in parts)
-                        {
-                            <option value="@p.Id">@p.Name (@string.Format("{0:0.00}", p.UnitPrice))</option>
-                        }
+                        <option value="@p.Name" data-id="@p.Id">@p.Name (@string.Format("{0:0.00}", p.UnitPrice))</option>
                     }
-                </select>
+                </datalist>
+                <small class="form-text text-muted">Pick a suggestion to link the part by ID.</small>
             </div>
 
             <div class="col-12" id="laborDescriptionWrapper" style="display:none;">
@@ -196,9 +223,13 @@
             if (type === 'Part') {
                 partWrapper.style.display = 'block';
                 laborWrapper.style.display = 'none';
+                document.getElementById('partSearch').value = '';
+                document.getElementById('PartId').value = '';
             } else {
                 partWrapper.style.display = 'none';
                 laborWrapper.style.display = 'block';
+                document.getElementById('partSearch').value = '';
+                document.getElementById('PartId').value = '';
             }
         });
 
@@ -231,5 +262,47 @@
                 alert('Unable to open chat for this work order.');
             });
         });
+
+        // Vehicle search -> hidden ID sync
+        (function () {
+            const vehicleInput = document.getElementById('vehicleSearch');
+            const vehicleHidden = document.getElementById('VehicleId');
+            const options = document.querySelectorAll('#vehicleOptionsList option');
+
+            function syncVehicle() {
+                const val = vehicleInput.value;
+                let match = null;
+                options.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                    }
+                });
+                vehicleHidden.value = match || '';
+            }
+
+            vehicleInput?.addEventListener('input', syncVehicle);
+            vehicleInput?.addEventListener('change', syncVehicle);
+        })();
+
+        // Part search -> hidden ID sync
+        (function () {
+            const partInput = document.getElementById('partSearch');
+            const partHidden = document.getElementById('PartId');
+            const options = document.querySelectorAll('#partOptionsList option');
+
+            function syncPart() {
+                const val = partInput.value;
+                let match = null;
+                options.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                    }
+                });
+                partHidden.value = match || '';
+            }
+
+            partInput?.addEventListener('input', syncPart);
+            partInput?.addEventListener('change', syncPart);
+        })();
     </script>
 }

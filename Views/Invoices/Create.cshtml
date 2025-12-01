@@ -20,12 +20,54 @@
         <form asp-action="Create">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
-                <label asp-for="WorkOrderId" class="control-label"></label>
-                <select asp-for="WorkOrderId" class ="form-control" asp-items="ViewBag.WorkOrderId"></select>
+                <label class="control-label">Work Order</label>
+                <input type="hidden" asp-for="WorkOrderId" id="WorkOrderId" />
+                @{
+                    var workOrderOptions = ViewBag.WorkOrderOptions as IEnumerable<dynamic>;
+                    var selectedWoLabel = workOrderOptions?.FirstOrDefault(o => o.Id == Model?.WorkOrderId)?.Label ?? "";
+                }
+                <input type="text"
+                       id="workOrderSearch"
+                       class="form-control"
+                       list="workOrderOptionsList"
+                       placeholder="Search work order by plate, car, or customer"
+                       value="@selectedWoLabel"
+                       autocomplete="off" />
+                <datalist id="workOrderOptionsList">
+                    @if (workOrderOptions != null)
+                    {
+                        foreach (var opt in workOrderOptions)
+                        {
+                            <option value="@opt.Label" data-id="@opt.Id" data-customer="@opt.CustomerId"></option>
+                        }
+                    }
+                </datalist>
+                <span asp-validation-for="WorkOrderId" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="CustomerId" class="control-label"></label>
-                <select asp-for="CustomerId" class ="form-control" asp-items="ViewBag.CustomerId"></select>
+                <label class="control-label">Customer</label>
+                <input type="hidden" asp-for="CustomerId" id="CustomerId" />
+                @{
+                    var customerOptions = ViewBag.CustomerOptions as IEnumerable<dynamic>;
+                    var selectedCustomerLabel = customerOptions?.FirstOrDefault(o => o.Id == Model?.CustomerId)?.Label ?? "";
+                }
+                <input type="text"
+                       id="customerSearch"
+                       class="form-control"
+                       list="customerOptionsList"
+                       placeholder="Search customer by name or phone"
+                       value="@selectedCustomerLabel"
+                       autocomplete="off" />
+                <datalist id="customerOptionsList">
+                    @if (customerOptions != null)
+                    {
+                        foreach (var opt in customerOptions)
+                        {
+                            <option value="@opt.Label" data-id="@opt.Id"></option>
+                        }
+                    }
+                </datalist>
+                <span asp-validation-for="CustomerId" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="IssuedAt" class="control-label"></label>
@@ -70,6 +112,56 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (function () {
+            const woInput = document.getElementById('workOrderSearch');
+            const woHidden = document.getElementById('WorkOrderId');
+            const woOptions = document.querySelectorAll('#workOrderOptionsList option');
+
+            const custInput = document.getElementById('customerSearch');
+            const custHidden = document.getElementById('CustomerId');
+            const custOptions = document.querySelectorAll('#customerOptionsList option');
+
+            function syncCustomerById(customerId) {
+                if (!customerId) return;
+                custHidden.value = customerId;
+                const custOpt = Array.from(custOptions).find(o => o.getAttribute('data-id') === customerId);
+                custInput.value = custOpt ? custOpt.value : custInput.value;
+            }
+
+            function syncWo() {
+                const val = woInput.value;
+                let match = null;
+                let matchCustomer = null;
+                woOptions.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                        matchCustomer = opt.getAttribute('data-customer');
+                    }
+                });
+                woHidden.value = match || '';
+                if (matchCustomer) {
+                    syncCustomerById(matchCustomer);
+                }
+            }
+
+            function syncCust() {
+                const val = custInput.value;
+                let match = null;
+                custOptions.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                    }
+                });
+                custHidden.value = match || '';
+            }
+
+            woInput?.addEventListener('input', syncWo);
+            woInput?.addEventListener('change', syncWo);
+            custInput?.addEventListener('input', syncCust);
+            custInput?.addEventListener('change', syncCust);
+        })();
+    </script>
 }
 </body>
 </html>

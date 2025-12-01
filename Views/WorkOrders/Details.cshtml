@@ -79,13 +79,13 @@
                                 <td>@item.ItemType</td>
                                 <td>@item.Description</td>
                                 <td>@item.Quantity.ToString("0.00")</td>
-                                <td>@item.UnitPrice.ToString("C")</td>
-                                <td>@(item.Quantity * item.UnitPrice).ToString("C")</td>
+                                <td>@string.Format("{0:0.00}", item.UnitPrice)</td>
+                                <td>@string.Format("{0:0.00}", item.Quantity * item.UnitPrice)</td>
                             </tr>
                         }
                         <tr>
                             <td colspan="4" class="text-end fw-semibold">Total</td>
-                            <td class="fw-semibold">@Model.Items.Sum(i => i.Quantity * i.UnitPrice).ToString("C")</td>
+                            <td class="fw-semibold">@string.Format("{0:0.00}", Model.Items.Sum(i => i.Quantity * i.UnitPrice))</td>
                         </tr>
                     }
                     else

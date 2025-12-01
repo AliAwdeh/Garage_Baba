@@ -29,7 +29,7 @@ namespace Project_Advanced.Controllers
                 .Select(c => new
                 {
                     c.Id,
-                    Label = $"{c.FirstName} {c.LastName} ({c.Email})"
+                    Label = $"{c.FirstName} {c.LastName} - {(string.IsNullOrWhiteSpace(c.Phone) ? "No phone" : c.Phone)}{(string.IsNullOrWhiteSpace(c.Email) ? "" : $" ({c.Email})")}"
                 })
                 .ToList();
 

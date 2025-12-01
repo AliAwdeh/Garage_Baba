@@ -20,8 +20,28 @@
         <form asp-action="Create">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
-                <label asp-for="InvoiceId" class="control-label"></label>
-                <select asp-for="InvoiceId" class ="form-control" asp-items="ViewBag.InvoiceId"></select>
+                <label class="control-label">Invoice</label>
+                <input type="hidden" asp-for="InvoiceId" id="InvoiceId" />
+                @{
+                    var invoiceOptions = ViewBag.InvoiceOptions as IEnumerable<dynamic>;
+                }
+                <input type="text"
+                       id="invoiceSearch"
+                       class="form-control"
+                       list="invoiceOptionsList"
+                       placeholder="Search invoice by number, plate, or customer"
+                       autocomplete="off" />
+                <datalist id="invoiceOptionsList">
+                    @if (invoiceOptions != null)
+                    {
+                        foreach (var opt in invoiceOptions)
+                        {
+                            <option value="@opt.Label" data-id="@opt.Id"></option>
+                        }
+                    }
+                </datalist>
+                <small class="form-text text-muted">Select a suggestion; it links the invoice by ID.</small>
+                <span asp-validation-for="InvoiceId" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="PaidAt" class="control-label"></label>
@@ -56,6 +76,27 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (function () {
+            const invoiceInput = document.getElementById('invoiceSearch');
+            const invoiceHidden = document.getElementById('InvoiceId');
+            const options = document.querySelectorAll('#invoiceOptionsList option');
+
+            function syncInvoice() {
+                const val = invoiceInput.value;
+                let match = null;
+                options.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                    }
+                });
+                invoiceHidden.value = match || '';
+            }
+
+            invoiceInput?.addEventListener('input', syncInvoice);
+            invoiceInput?.addEventListener('change', syncInvoice);
+        })();
+    </script>
 }
 </body>
 </html>

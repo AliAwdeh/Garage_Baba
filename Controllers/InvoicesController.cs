@@ -92,12 +92,7 @@ namespace Project_Advanced.Controllers
         [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
-            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "FirstName");
-            ViewData["WorkOrderId"] = new SelectList(_context.WorkOrders.Include(w => w.Vehicle).Select(w => new
-            {
-                w.Id,
-                Label = $"{w.Id} - {w.Vehicle.PlateNumber}"
-            }), "Id", "Label");
+            LoadLookups();
             return View();
         }
 
@@ -113,8 +108,7 @@ namespace Project_Advanced.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "FirstName", invoice.CustomerId);
-            ViewData["WorkOrderId"] = new SelectList(_context.WorkOrders, "Id", "Id", invoice.WorkOrderId);
+            LoadLookups(invoice.CustomerId, invoice.WorkOrderId);
             return View(invoice);
         }
 
@@ -132,12 +126,7 @@ namespace Project_Advanced.Controllers
             {
                 return NotFound();
             }
-            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "FirstName", invoice.CustomerId);
-            ViewData["WorkOrderId"] = new SelectList(_context.WorkOrders.Include(w => w.Vehicle).Select(w => new
-            {
-                w.Id,
-                Label = $"{w.Id} - {w.Vehicle.PlateNumber}"
-            }), "Id", "Label", invoice.WorkOrderId);
+            LoadLookups(invoice.CustomerId, invoice.WorkOrderId);
             return View(invoice);
         }
 
@@ -226,8 +215,7 @@ namespace Project_Advanced.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "FirstName", invoice.CustomerId);
-            ViewData["WorkOrderId"] = new SelectList(_context.WorkOrders, "Id", "Id", invoice.WorkOrderId);
+            LoadLookups(invoice.CustomerId, invoice.WorkOrderId);
             return View(invoice);
         }
 
@@ -333,6 +321,33 @@ namespace Project_Advanced.Controllers
 
             var currentCustomer = await EnsureCurrentCustomerAsync();
             return currentCustomer != null && currentCustomer.Id == customerId;
+        }
+
+        private void LoadLookups(int? selectedCustomerId = null, int? selectedWorkOrderId = null)
+        {
+            var customers = _context.Customers
+                .Select(c => new
+                {
+                    c.Id,
+                    Label = $"{c.FirstName} {c.LastName} - {(string.IsNullOrWhiteSpace(c.Phone) ? "No phone" : c.Phone)}{(string.IsNullOrWhiteSpace(c.Email) ? "" : $" ({c.Email})")}"
+                })
+                .ToList();
+
+            var workOrders = _context.WorkOrders
+                .Include(w => w.Vehicle)
+                    .ThenInclude(v => v.Customer)
+                .Select(w => new
+                {
+                    w.Id,
+                    CustomerId = w.Vehicle.CustomerId,
+                    Label = $"{w.Id} - {w.Vehicle.PlateNumber} {w.Vehicle.Make} {w.Vehicle.Model} - {w.Vehicle.Customer.FirstName} {w.Vehicle.Customer.LastName}"
+                })
+                .ToList();
+
+            ViewBag.CustomerOptions = customers;
+            ViewBag.WorkOrderOptions = workOrders;
+            ViewData["CustomerId"] = new SelectList(customers, "Id", "Label", selectedCustomerId);
+            ViewData["WorkOrderId"] = new SelectList(workOrders, "Id", "Label", selectedWorkOrderId);
         }
     }
 }

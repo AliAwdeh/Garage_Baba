@@ -16,11 +16,27 @@
                 @if (isAdmin)
                 {
                     <div class="mb-3">
-                        <label asp-for="CustomerId" class="form-label">Customer</label>
-                        <select asp-for="CustomerId"
-                                class="form-select"
-                                asp-items="ViewBag.CustomerId">
-                        </select>
+                        <label class="form-label">Customer</label>
+                        <input type="hidden" asp-for="CustomerId" id="CustomerId" />
+                        @{
+                            var customerOptions = ViewBag.CustomerOptions as IEnumerable<dynamic>;
+                        }
+                        <input type="text"
+                               id="customerSearch"
+                               class="form-control"
+                               list="customerOptionsList"
+                               placeholder="Search customer by name or phone"
+                               autocomplete="off" />
+                        <datalist id="customerOptionsList">
+                            @if (customerOptions != null)
+                            {
+                                foreach (var c in customerOptions)
+                                {
+                                    <option value="@c.Label" data-id="@c.Id"></option>
+                                }
+                            }
+                        </datalist>
+                        <small class="form-text text-muted">Select a suggestion; customer is linked by ID.</small>
                         <span asp-validation-for="CustomerId" class="text-danger"></span>
                     </div>
                 }
@@ -31,16 +47,26 @@
 
                 <div class="mb-3">
                     <label asp-for="VehicleId" class="form-label">Vehicle</label>
-                    <select asp-for="VehicleId" class="form-select">
-                        <option value="">-- Select vehicle --</option>
-                        @if (isAdmin && ViewBag.VehicleOptions is IEnumerable<dynamic> vehicles)
+                    <input type="hidden" asp-for="VehicleId" id="VehicleId" />
+                    @{
+                        var vehicleOptions = ViewBag.VehicleOptions as IEnumerable<dynamic>;
+                    }
+                    <input type="text"
+                           id="vehicleSearch"
+                           class="form-control"
+                           list="vehicleOptionsList"
+                           placeholder="Search vehicle by plate or model"
+                           autocomplete="off" />
+                    <datalist id="vehicleOptionsList">
+                        @if (vehicleOptions != null)
                         {
-                            foreach (var v in vehicles)
+                            foreach (var v in vehicleOptions)
                             {
-                                <option value="@v.Id" data-customer="@v.CustomerId">@v.Label</option>
+                                <option value="@v.Label" data-id="@v.Id" data-customer="@v.CustomerId"></option>
                             }
                         }
-                    </select>
+                    </datalist>
+                    <small class="form-text text-muted">Select a suggestion; vehicle is linked by ID.</small>
                     <span asp-validation-for="VehicleId" class="text-danger"></span>
                 </div>
 
@@ -103,25 +129,62 @@
 
     <script>
         (function () {
-            // === Vehicle filtering for Admin (by customer) ===
-            const customerSelect = document.getElementById('CustomerId');
-            const vehicleSelect = document.getElementById('VehicleId');
+            const customerInput = document.getElementById('customerSearch');
+            const customerHidden = document.getElementById('CustomerId');
+            const customerOptions = document.querySelectorAll('#customerOptionsList option');
 
-            if (customerSelect && vehicleSelect) {
-                const allOptions = Array.from(vehicleSelect.options)
-                    .filter(o => o.value !== "");
+            const vehicleInput = document.getElementById('vehicleSearch');
+            const vehicleHidden = document.getElementById('VehicleId');
+            const vehicleOptions = document.querySelectorAll('#vehicleOptionsList option');
 
-                function filterVehicles() {
-                    const customerId = customerSelect.value;
-                    vehicleSelect.innerHTML = '<option value="">-- Select vehicle --</option>';
-                    allOptions
-                        .filter(o => !customerId || o.dataset.customer === customerId)
-                        .forEach(o => vehicleSelect.appendChild(o.cloneNode(true)));
-                }
-
-                customerSelect.addEventListener('change', filterVehicles);
-                filterVehicles();
+            function syncCustomer() {
+                const val = customerInput.value;
+                let match = null;
+                customerOptions.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                    }
+                });
+                customerHidden.value = match || '';
+                filterVehicles(match);
             }
+
+            function filterVehicles(customerId) {
+                if (!vehicleInput) return;
+                const matchedVehicle = Array.from(vehicleOptions).find(opt => {
+                    const byCustomer = customerId ? opt.getAttribute('data-customer') === customerId : true;
+                    return byCustomer && opt.value === vehicleInput.value;
+                });
+                // clear selection if current vehicle doesn't match selected customer
+                const currentVehicleCustomer = Array.from(vehicleOptions).find(opt => opt.value === vehicleInput.value)?.getAttribute('data-customer');
+                if (customerId && currentVehicleCustomer && currentVehicleCustomer !== customerId) {
+                    vehicleInput.value = '';
+                    vehicleHidden.value = '';
+                }
+            }
+
+            function syncVehicle() {
+                const val = vehicleInput.value;
+                let match = null;
+                let matchCustomer = null;
+                vehicleOptions.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                        matchCustomer = opt.getAttribute('data-customer');
+                    }
+                });
+                vehicleHidden.value = match || '';
+                if (matchCustomer) {
+                    customerHidden.value = matchCustomer;
+                    const custOpt = Array.from(customerOptions).find(o => o.getAttribute('data-id') === matchCustomer);
+                    customerInput.value = custOpt ? custOpt.value : customerInput.value;
+                }
+            }
+
+            customerInput?.addEventListener('input', syncCustomer);
+            customerInput?.addEventListener('change', syncCustomer);
+            vehicleInput?.addEventListener('input', syncVehicle);
+            vehicleInput?.addEventListener('change', syncVehicle);
 
             // === Date + time slot logic (1-hour increments) ===
             const dateInput = document.getElementById('appointmentDate');

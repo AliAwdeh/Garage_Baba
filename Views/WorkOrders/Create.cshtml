@@ -12,9 +12,28 @@
 
                 <div class="mb-3">
                     <label asp-for="VehicleId" class="form-label">Vehicle</label>
-                    <select asp-for="VehicleId" class="form-select" asp-items="ViewBag.VehicleId" required>
-                        <option value="">-- Select vehicle --</option>
-                    </select>
+                    <input type="hidden" asp-for="VehicleId" id="VehicleId" />
+                    @{
+                        var vehicleOptions = ViewBag.VehicleId as IEnumerable<SelectListItem>;
+                        var selectedVehicleLabel = vehicleOptions?.FirstOrDefault(v => v.Value == Model?.VehicleId.ToString())?.Text ?? "";
+                    }
+                    <input type="text"
+                           id="vehicleSearch"
+                           class="form-control"
+                           list="vehicleOptionsList"
+                           placeholder="Search by plate, make/model, or customer"
+                           value="@selectedVehicleLabel"
+                           autocomplete="off" />
+                    <datalist id="vehicleOptionsList">
+                        @if (vehicleOptions != null)
+                        {
+                            foreach (var opt in vehicleOptions)
+                            {
+                                <option value="@opt.Text" data-id="@opt.Value"></option>
+                            }
+                        }
+                    </datalist>
+                    <small class="form-text text-muted">Select an entry; the vehicle will be linked by ID.</small>
                     <span asp-validation-for="VehicleId" class="text-danger"></span>
                 </div>
 
@@ -42,4 +61,25 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (function () {
+            const vehicleInput = document.getElementById('vehicleSearch');
+            const vehicleHidden = document.getElementById('VehicleId');
+            const options = document.querySelectorAll('#vehicleOptionsList option');
+
+            function syncVehicle() {
+                const val = vehicleInput.value;
+                let match = null;
+                options.forEach(opt => {
+                    if (opt.value === val) {
+                        match = opt.getAttribute('data-id');
+                    }
+                });
+                vehicleHidden.value = match || '';
+            }
+
+            vehicleInput?.addEventListener('input', syncVehicle);
+            vehicleInput?.addEventListener('change', syncVehicle);
+        })();
+    </script>
 }
