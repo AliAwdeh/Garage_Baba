@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Project_Advanced.Migrations
 {
     /// <inheritdoc />
-    public partial class ICMySql : Migration
+    public partial class newdatabaseserver : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

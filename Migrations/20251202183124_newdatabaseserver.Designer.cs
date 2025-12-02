@@ -12,8 +12,8 @@ using Project_Advanced.Data;
 namespace Project_Advanced.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251130171146_ICMySql")]
-    partial class ICMySql
+    [Migration("20251202183124_newdatabaseserver")]
+    partial class newdatabaseserver
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
