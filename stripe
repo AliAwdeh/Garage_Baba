@@ -1,1 +1,1 @@
-stripe listen --forward-to https://localhost:5267/payments/stripewebhook
+stripe listen --forward-to http://localhost:5267/payments/stripewebhook
