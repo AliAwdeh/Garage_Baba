@@ -265,7 +265,6 @@ namespace Project_Advanced.Controllers
             ViewData["InvoiceId"] = new SelectList(invoices, "Id", "Label", selectedId);
         }
 
-        // Customer Stripe payment kickoff: create Stripe Checkout Session
         [HttpGet]
         public async Task<IActionResult> BeginStripePayment(int invoiceId, decimal amount = 0)
         {
@@ -374,7 +373,6 @@ public async Task<IActionResult> StripeWebhook()
     {
         try
         {
-            // 👇 NOTE: explicitly disable API version mismatch exception
             stripeEvent = EventUtility.ConstructEvent(
                 json,
                 signatureHeader,
@@ -393,10 +391,8 @@ public async Task<IActionResult> StripeWebhook()
     }
     else
     {
-        // Dev fallback: no signature validation (only for localhost demo)
         try
         {
-            // 👇 same here if you want to be explicit
             stripeEvent = EventUtility.ParseEvent(json, throwOnApiVersionMismatch: false);
             _logger.LogWarning("Stripe webhook processed WITHOUT signature validation (no WebhookSecret configured).");
         }

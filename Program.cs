@@ -13,9 +13,7 @@ using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =======================
-// Database (MySQL)
-// =======================
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -35,9 +33,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// =======================
-// Identity + Roles
-// =======================
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
@@ -47,9 +42,6 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 
 builder.Services.AddControllersWithViews();
 
-// =======================
-// HttpClient for External AI
-// =======================
 var externalAiBaseUrl = builder.Configuration["ExternalAI:BaseUrl"]
     ?? throw new InvalidOperationException("ExternalAI:BaseUrl is not configured");
 
@@ -60,20 +52,9 @@ builder.Services.AddHttpClient("ExternalAI", client =>
 
 var app = builder.Build();
 
-// =======================
-// Stripe config
-// =======================
-// appsettings.json:
-// "Stripe": {
-//   "SecretKey": "sk_test_...",
-//   "WebhookSecret": "whsec_..."
-// }
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
-// =======================
-// HTTP request pipeline
-// =======================
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -92,9 +73,6 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// =======================
-// Block public self-registration
-// =======================
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.HasValue &&
@@ -107,9 +85,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// =======================
-// Routing
-// =======================
+
 app.MapStaticAssets();
 
 app.MapControllerRoute(
@@ -120,18 +96,12 @@ app.MapControllerRoute(
 app.MapRazorPages()
    .WithStaticAssets();
 
-// =======================
-// Seeding
-// =======================
 await EnsureRolesAndAdminAsync(app.Services, app.Configuration, app.Environment);
 await EnsureSampleDataAsync(app.Services);
 
 app.Run();
 
 
-// ======================================================
-// Helpers: Roles/Admin seeding
-// ======================================================
 static async Task EnsureRolesAndAdminAsync(IServiceProvider services, IConfiguration config, IWebHostEnvironment env)
 {
     using var scope = services.CreateScope();
@@ -152,7 +122,6 @@ static async Task EnsureRolesAndAdminAsync(IServiceProvider services, IConfigura
         }
     }
 
-    // Only create the seed admin during development
     if (env.IsDevelopment())
     {
         var adminEmail = config["AdminUser:Email"] ?? "admin@garage.local";
@@ -183,9 +152,7 @@ static async Task EnsureRolesAndAdminAsync(IServiceProvider services, IConfigura
     }
 }
 
-// ======================================================
-// Helpers: Sample data seeding (customers/vehicles/appointments)
-// ======================================================
+
 static async Task EnsureSampleDataAsync(IServiceProvider services)
 {
     using var scope = services.CreateScope();
@@ -195,10 +162,9 @@ static async Task EnsureSampleDataAsync(IServiceProvider services)
     var vehicleCount = await context.Vehicles.CountAsync();
     if (vehicleCount >= 50)
     {
-        return; // plenty of sample data already
+        return; 
     }
 
-    // Only add the original small seed when the database is empty
     if (vehicleCount == 0)
     {
         var sampleCustomer = new CustomerModel
