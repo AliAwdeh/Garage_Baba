@@ -10,6 +10,7 @@ using Project_Advanced.Models;
 using Stripe;
 using CustomerModel = Project_Advanced.Models.Customer;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
+using Project_Advanced.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,8 @@ builder.Services.AddHttpClient("ExternalAI", client =>
 {
     client.BaseAddress = new Uri(externalAiBaseUrl);
 });
+
+builder.Services.AddSingleton<WhisperService>();
 
 var app = builder.Build();
 

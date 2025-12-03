@@ -30,7 +30,7 @@ artifacts/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
-
+models/ggml-small.bin
 # NuGet Packages
 *.nupkg
 # NuGet Symbol Packages

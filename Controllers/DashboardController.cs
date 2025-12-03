@@ -20,13 +20,25 @@ namespace Project_Advanced.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(DateTime? laborFrom = null, DateTime? laborTo = null)
         {
             var nowUtc = DateTime.UtcNow;
             var todayUtc = nowUtc.Date;
             var todayLocal = DateTime.Today;
             var weekStartUtc = GetWeekStart(todayUtc);
             var monthStartUtc = new DateTime(todayUtc.Year, todayUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            // Labor revenue date range defaults to last 30 days (inclusive)
+            var defaultStartLocal = todayLocal.AddDays(-29);
+            var startLocal = laborFrom?.Date ?? defaultStartLocal;
+            var endLocal = laborTo?.Date ?? todayLocal;
+            if (endLocal < startLocal)
+            {
+                (startLocal, endLocal) = (endLocal, startLocal);
+            }
+
+            var startUtc = DateTime.SpecifyKind(startLocal, DateTimeKind.Local).ToUniversalTime();
+            var endExclusiveUtc = DateTime.SpecifyKind(endLocal.AddDays(1), DateTimeKind.Local).ToUniversalTime();
 
             var closedStatuses = new[] { WorkOrderStatus.Completed, WorkOrderStatus.Invoiced };
 
@@ -49,6 +61,14 @@ namespace Project_Advanced.Controllers
                     .SumAsync(i => (decimal?)(i.Quantity * i.UnitPrice)) ?? 0,
                 PartsRevenueTotal = await _context.WorkOrderItems
                     .Where(i => i.ItemType == WorkOrderItemType.Part)
+                    .SumAsync(i => (decimal?)(i.Quantity * i.UnitPrice)) ?? 0,
+                LaborRangeStart = startLocal,
+                LaborRangeEnd = endLocal,
+                LaborRevenueInRange = await _context.WorkOrderItems
+                    .Where(i => i.ItemType == WorkOrderItemType.Labor)
+                    .Where(i => i.WorkOrder != null &&
+                                i.WorkOrder.CreatedAt >= startUtc &&
+                                i.WorkOrder.CreatedAt < endExclusiveUtc)
                     .SumAsync(i => (decimal?)(i.Quantity * i.UnitPrice)) ?? 0,
 
                 TodaysAppointments = await _context.Appointments

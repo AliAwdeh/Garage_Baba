@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Project_Advanced.Data;
 using Project_Advanced.Models;
 using Project_Advanced.Models.ViewModels;
+using Project_Advanced.Services;
 using System.Linq;
 
 namespace Project_Advanced.Controllers
@@ -16,11 +18,13 @@ namespace Project_Advanced.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly WhisperService _whisperService;
 
-        public WorkOrdersController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
+        public WorkOrdersController(ApplicationDbContext context, UserManager<IdentityUser> userManager, WhisperService whisperService)
         {
             _context = context;
             _userManager = userManager;
+            _whisperService = whisperService;
         }
 
         private const int PageSize = 10;
@@ -362,6 +366,33 @@ namespace Project_Advanced.Controllers
                 await _context.SaveChangesAsync();
             }
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> TranscribeProblemDescription(IFormFile audioFile)
+        {
+            if (audioFile == null || audioFile.Length == 0)
+            {
+                return BadRequest(new { error = "Audio file is required." });
+            }
+
+            try
+            {
+                using var stream = audioFile.OpenReadStream();
+                var text = await _whisperService.TranscribeAsync(stream);
+                return Json(new { text });
+            }
+            catch (FileNotFoundException ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Transcription failed: {ex}");
+                return StatusCode(500, new { error = "Unable to transcribe audio. Please try again.", detail = ex.Message });
+            }
         }
 
         private bool WorkOrderExists(int id)

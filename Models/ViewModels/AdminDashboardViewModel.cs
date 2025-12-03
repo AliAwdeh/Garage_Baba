@@ -21,6 +21,10 @@ namespace Project_Advanced.Models.ViewModels
         public decimal LaborRevenueTotal { get; set; }
         public decimal PartsRevenueTotal { get; set; }
 
+        public DateTime LaborRangeStart { get; set; }
+        public DateTime LaborRangeEnd { get; set; }
+        public decimal LaborRevenueInRange { get; set; }
+
         public List<Appointment> TodaysAppointments { get; set; } = new();
 
         public List<OutstandingInvoiceSummary> OutstandingInvoices { get; set; } = new();

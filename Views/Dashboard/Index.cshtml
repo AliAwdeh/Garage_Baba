@@ -43,6 +43,36 @@
     </div>
 
     <div class="row g-3 mt-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
+                        <div>
+                            <h5 class="card-title mb-1">Labor revenue (date range)</h5>
+                            <div class="text-muted small">Sum of labor lines on work orders created within the selected dates.</div>
+                            <div class="h2 mb-0 text-primary">@Model.LaborRevenueInRange.ToString("C")</div>
+                            <div class="small text-muted">From @Model.LaborRangeStart.ToString("MMM dd, yyyy") to @Model.LaborRangeEnd.ToString("MMM dd, yyyy")</div>
+                        </div>
+                        <form asp-controller="Dashboard" asp-action="Index" method="get" class="row g-2 align-items-end">
+                            <div class="col-12 col-sm-auto">
+                                <label class="form-label mb-1 small fw-semibold" for="laborFrom">From</label>
+                                <input type="date" class="form-control" id="laborFrom" name="laborFrom" value="@Model.LaborRangeStart.ToString("yyyy-MM-dd")" />
+                            </div>
+                            <div class="col-12 col-sm-auto">
+                                <label class="form-label mb-1 small fw-semibold" for="laborTo">To</label>
+                                <input type="date" class="form-control" id="laborTo" name="laborTo" value="@Model.LaborRangeEnd.ToString("yyyy-MM-dd")" />
+                            </div>
+                            <div class="col-12 col-sm-auto d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary">Update</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-3">
         <div class="col-md-6">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
